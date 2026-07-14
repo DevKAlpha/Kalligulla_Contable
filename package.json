@@ -1,0 +1,60 @@
+{
+  "name": "kaligula-finance",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Consola financiera personal retro, disponible como web app y aplicación de escritorio.",
+  "author": "Kaligula Finance",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "desktop:build": "npm run build && electron-builder",
+    "desktop:win": "npm run build && electron-builder --win portable",
+    "icons": "node scripts/generate-icons.cjs",
+    "check": "eslint ."
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "@eslint/js": "latest",
+    "concurrently": "latest",
+    "electron": "latest",
+    "electron-builder": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "wait-on": "latest"
+  },
+  "build": {
+    "appId": "com.kaligula.finance",
+    "productName": "Kaligula",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["portable"],
+      "icon": "public/kaligula.ico",
+      "artifactName": "Kaligula-${version}-Portable.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.finance"
+    }
+  }
+}

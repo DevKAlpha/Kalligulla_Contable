@@ -1,0 +1,9 @@
+services:
+  kaligula:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kaligula-finance
+    ports:
+      - "8080:80"
+    restart: unless-stopped
