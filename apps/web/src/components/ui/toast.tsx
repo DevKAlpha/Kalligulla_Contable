@@ -1,7 +1,7 @@
 'use client'
 
 import { CircleAlert, CircleCheck, Info, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useUiStore } from '@/features/ui/ui-store'
 import { cn } from '@/lib/cn'
 
@@ -17,9 +17,28 @@ export function Toaster() {
     return () => window.clearTimeout(timer)
   }, [toast, dismiss])
 
+  // A manual popover lives in the browser's top layer, so the toast stays visible above modal dialogs.
+  const layer = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = layer.current
+    if (!element || typeof element.showPopover !== 'function') return
+    try {
+      if (element.matches(':popover-open')) element.hidePopover()
+      if (toast) element.showPopover()
+    } catch {
+      /* popover unsupported: the fixed-position fallback still shows the toast */
+    }
+  }, [toast])
+
   const Icon = toast ? ICONS[toast.tone] : Info
   return (
-    <div aria-live="polite" role="status" className="pointer-events-none fixed inset-x-0 bottom-[calc(140px+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 lg:bottom-10">
+    <div
+      ref={layer}
+      popover="manual"
+      aria-live="polite"
+      role="status"
+      className="pointer-events-none fixed inset-x-0 top-auto bottom-[calc(140px+env(safe-area-inset-bottom))] z-50 m-0 flex h-auto w-full justify-center overflow-visible border-0 bg-transparent p-0 px-4 text-inherit lg:bottom-10 [&:not(:popover-open)]:hidden"
+    >
       {toast && (
         <div
           key={toast.id}

@@ -2,7 +2,7 @@ const { app, BrowserWindow, shell, utilityProcess } = require('electron')
 const path = require('node:path')
 
 const isDevelopment = !app.isPackaged
-const DEV_URL = 'http://localhost:3000'
+const DEV_URL = 'http://127.0.0.1:3000'
 /**
  * Fixed port on purpose: localStorage is scoped to the origin, so changing the port
  * would make previously saved data invisible.
@@ -12,7 +12,7 @@ const HOST = '127.0.0.1'
 
 let server = null
 
-async function waitForServer(url, timeoutMs = 20000) {
+async function waitForServer(url, timeoutMs = 45000) {
   const started = Date.now()
   while (Date.now() - started < timeoutMs) {
     try {
@@ -29,7 +29,14 @@ async function waitForServer(url, timeoutMs = 20000) {
 async function startEmbeddedServer() {
   const serverPath = path.join(process.resourcesPath, 'web', 'apps', 'web', 'server.js')
   server = utilityProcess.fork(serverPath, [], {
-    env: { ...process.env, NODE_ENV: 'production', PORT: String(PORT), HOSTNAME: HOST },
+    env: {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: String(PORT),
+      HOSTNAME: HOST,
+      // Embedded PostgreSQL (PGlite) database, kept in the user's profile folder.
+      KALIGULA_DATA_DIR: path.join(app.getPath('userData'), 'database'),
+    },
     stdio: 'inherit',
     serviceName: 'kaligula-web',
   })

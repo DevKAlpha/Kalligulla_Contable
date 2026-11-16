@@ -1,6 +1,6 @@
 'use client'
 
-import { HardDriveDownload, Moon, Plus, Sun, Target } from 'lucide-react'
+import { HardDriveDownload, Moon, Plus, Sun, Tags, Target } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { useTheme } from '@/features/theme/theme'
@@ -51,6 +51,7 @@ function LeftRail({ pathname }: { pathname: string }) {
 function RightRail() {
   const openMovement = useUiStore((state) => state.openMovement)
   const openDialog = useUiStore((state) => state.openDialog)
+  const openCategories = useUiStore((state) => state.openCategories)
   const { theme, toggle } = useTheme()
   return (
     <aside className="hidden min-h-0 flex-col items-center gap-3.5 py-3 lg:flex" aria-label="Acciones rápidas">
@@ -64,7 +65,8 @@ function RightRail() {
       />
       <span className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Registro</span>
       <div className="mt-3 flex flex-col gap-3.5">
-        <ConsoleButtonKey icon={Target} label="Meta" onClick={() => openDialog('goal')} className="h-[60px] w-[76px]" />
+        <ConsoleButtonKey icon={Target} label="Metas" onClick={() => openDialog('goals')} className="h-[60px] w-[76px]" />
+        <ConsoleButtonKey icon={Tags} label="Categorías" onClick={() => openCategories('expense')} className="h-[60px] w-[76px] text-[10px]" />
         <ConsoleButtonKey icon={HardDriveDownload} label="Respaldo" onClick={() => openDialog('backup')} className="h-[60px] w-[76px]" />
         <ConsoleButtonKey
           icon={theme === 'dark' ? Sun : Moon}

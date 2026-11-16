@@ -11,6 +11,7 @@ COPY apps/desktop/package.json apps/desktop/
 COPY packages/domain/package.json packages/domain/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/api/package.json packages/api/
+COPY packages/db/package.json packages/db/
 RUN npm ci --no-audit --no-fund
 
 FROM node:22-alpine AS build

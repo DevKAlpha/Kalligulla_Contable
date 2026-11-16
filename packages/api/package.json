@@ -1,20 +1,27 @@
 {
   "name": "@kaligula/api",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "API HTTP (Hono) organizada en módulos hexagonales. Se monta en Next.js o corre sola en Node/Bun.",
+  "description": "API HTTP (Hono) en módulos hexagonales con persistencia en PostgreSQL/PGlite. Se monta en Next.js o corre sola en Node/Bun.",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/main.node.ts",
     "start": "tsx src/main.node.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.5",
-    "@kaligula/contracts": "0.3.0",
-    "hono": "4.13.14",
+    "@hono/node-server": "2.1.6",
+    "@kaligula/contracts": "0.4.0",
+    "@kaligula/db": "0.4.0",
+    "@kaligula/domain": "0.4.0",
+    "drizzle-orm": "0.45.4",
+    "hono": "4.13.16",
     "zod": "4.6.7"
   },
-  "devDependencies": { "tsx": "4.23.15" }
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
 }

@@ -1,19 +1,20 @@
 import { isIsoDate, toIsoDate } from './dates'
 import { DomainError } from './errors'
-import { normalizeGoal } from './goal'
-import { compareMovements, newId, normalizeDraft } from './movement'
 import { toMajor, toMinor } from './money'
-import { normalizeProfile } from './profile'
-import { createInitialState, MOVEMENT_TYPES, type FinanceState, type Movement, type MovementType, type SavingsGoal } from './types'
+import { normalizeSnapshot } from './snapshot'
+import { emptySnapshot, MOVEMENT_TYPES, type FinanceSnapshot, type MovementType } from './types'
 
+/** Backup columns. v3 files (previous Next.js version) are the same minus `goal_target_date`. */
 const CSV_COLUMNS = [
   'record_type', 'id', 'type', 'description', 'category', 'amount', 'currency', 'occurred_on', 'note',
-  'created_at', 'updated_at', 'profile_name', 'goal_name', 'goal_saved', 'goal_target',
+  'created_at', 'updated_at', 'profile_name', 'goal_name', 'goal_saved', 'goal_target', 'goal_target_date',
 ] as const
+const REQUIRED_CURRENT_COLUMNS = CSV_COLUMNS.filter((column) => column !== 'goal_target_date')
 
-/** Columns of the v2 backup produced by the previous Vite/JS version of Kaligula. */
+/** Columns of the v2 backup produced by the original Vite/JS version of Kaligula. */
 const LEGACY_COLUMNS = ['record_type', 'id', 'description', 'category', 'type', 'amount', 'goal_name', 'goal_current', 'goal_target'] as const
 
+type Column = (typeof CSV_COLUMNS)[number]
 type Row = Record<string, string>
 
 /** Byte order mark so Excel opens the UTF-8 file with accents intact. */
@@ -34,34 +35,37 @@ function majorString(minor: number): string {
   return String(toMajor(minor))
 }
 
-export function exportFinanceCsv(state: FinanceState): string {
-  const blank = Object.fromEntries(CSV_COLUMNS.map((column) => [column, ''])) as Record<(typeof CSV_COLUMNS)[number], string>
-  const rows: Record<string, string>[] = [
-    { ...blank, record_type: 'profile', profile_name: state.profile.name },
-  ]
-  if (state.goal) {
+export function exportSnapshotCsv(snapshot: FinanceSnapshot): string {
+  const blank = Object.fromEntries(CSV_COLUMNS.map((column) => [column, ''])) as Record<Column, string>
+  const rows: Record<Column, string>[] = [{ ...blank, record_type: 'profile', profile_name: snapshot.profile.name }]
+  for (const category of snapshot.categories) {
+    rows.push({ ...blank, record_type: 'category', type: category.type, category: category.name })
+  }
+  for (const goal of snapshot.goals) {
     rows.push({
       ...blank,
       record_type: 'goal',
-      goal_name: state.goal.name,
-      goal_saved: majorString(state.goal.savedMinor),
-      goal_target: majorString(state.goal.targetMinor),
+      id: goal.id ?? '',
+      goal_name: goal.name,
+      goal_saved: majorString(goal.savedMinor),
+      goal_target: majorString(goal.targetMinor),
+      goal_target_date: goal.targetDate ?? '',
     })
   }
-  for (const movement of state.movements) {
+  for (const movement of snapshot.movements) {
     rows.push({
       ...blank,
       record_type: 'movement',
-      id: movement.id,
+      id: movement.id ?? '',
       type: movement.type,
       description: movement.description,
       category: movement.category,
       amount: majorString(movement.amountMinor),
-      currency: movement.currency,
+      currency: 'COP',
       occurred_on: movement.occurredOn,
       note: movement.note ?? '',
-      created_at: movement.createdAt,
-      updated_at: movement.updatedAt,
+      created_at: movement.createdAt ?? '',
+      updated_at: movement.updatedAt ?? '',
     })
   }
   const lines = [CSV_COLUMNS.join(','), ...rows.map((row) => CSV_COLUMNS.map((column) => escapeCell(row[column])).join(','))]
@@ -101,38 +105,24 @@ export function parseCsv(csvText: string): string[][] {
   return rows
 }
 
-function amountToMinor(value: string, label: string): number {
-  const number = Number(value)
-  if (value.trim() === '' || !Number.isFinite(number)) throw new DomainError(`El valor de ${label} no es válido.`)
+function amountToMinor(value: string | undefined, label: string): number {
+  const text = (value ?? '').trim()
+  const number = Number(text)
+  if (text === '' || !Number.isFinite(number)) throw new DomainError(`El valor de ${label} no es válido.`)
   return toMinor(number)
 }
 
-function toRecords(rows: string[][]): Row[] {
+function toRecords(rows: string[][]): { record: Row; line: number }[] {
   const header = rows[0] ?? []
   return rows.slice(1)
-    .filter((row) => row.some((cell) => cell.trim() !== ''))
-    .map((row) => Object.fromEntries(header.map((column, index) => [column, unescapeCell(row[index])])))
+    .map((row, index) => ({ row, line: index + 2 }))
+    .filter(({ row }) => row.some((cell) => cell.trim() !== ''))
+    .map(({ row, line }) => ({ record: Object.fromEntries(header.map((column, index) => [column, unescapeCell(row[index])])), line }))
 }
 
-function buildMovement(record: Row, line: number, legacy: boolean, now: Date): Movement {
-  const type = record.type as MovementType
-  if (!MOVEMENT_TYPES.includes(type)) throw new DomainError(`Fila ${line}: tipo de registro desconocido.`)
-  const createdAt = record.created_at && !Number.isNaN(Date.parse(record.created_at)) ? record.created_at : now.toISOString()
-  const occurredOn = legacy
-    ? toIsoDate(new Date(createdAt))
-    : record.occurred_on
-  if (!isIsoDate(occurredOn)) throw new DomainError(`Fila ${line}: la fecha no es válida.`)
+function rowError(line: number, run: () => void) {
   try {
-    const draft = normalizeDraft({
-      type,
-      description: record.description,
-      category: record.category,
-      amountMinor: amountToMinor(record.amount, 'movimiento'),
-      occurredOn,
-      note: record.note,
-    })
-    const updatedAt = record.updated_at && !Number.isNaN(Date.parse(record.updated_at)) ? record.updated_at : createdAt
-    return { id: record.id || newId(), currency: 'COP', ...draft, createdAt, updatedAt }
+    run()
   } catch (error) {
     if (error instanceof DomainError) throw new DomainError(`Fila ${line}: ${error.message}`)
     throw error
@@ -140,46 +130,64 @@ function buildMovement(record: Row, line: number, legacy: boolean, now: Date): M
 }
 
 /**
- * Restores a backup. Accepts the current format and the v2 format of the previous version.
- * Totals in the file are ignored: they are always recomputed from the movements.
+ * Reads a backup into a validated snapshot. Accepts the current format and both previous ones (v3 and v2).
+ * Totals stored in old files are ignored: they are always recomputed from the movements.
  */
-export function importFinanceCsv(csvText: string, now: Date = new Date()): FinanceState {
+export function importSnapshotCsv(csvText: string, now: Date = new Date()): FinanceSnapshot {
   const rows = parseCsv(csvText)
   const header = rows[0] ?? []
-  const isCurrent = CSV_COLUMNS.every((column) => header.includes(column))
+  const isCurrent = REQUIRED_CURRENT_COLUMNS.every((column) => header.includes(column))
   const isLegacy = !isCurrent && LEGACY_COLUMNS.every((column) => header.includes(column))
   if (!isCurrent && !isLegacy) throw new DomainError('Este CSV no corresponde a un respaldo de Kaligula.')
 
-  const records = toRecords(rows)
-  const state = createInitialState()
-
-  const profileRecord = records.find((record) => record.record_type === (isLegacy ? 'summary' : 'profile'))
-  if (profileRecord) state.profile = normalizeProfile({ name: isLegacy ? profileRecord.user_name : profileRecord.profile_name })
-
-  const goalRecord = records.find((record) => record.record_type === 'goal')
-  if (goalRecord) {
-    const target = amountToMinor(goalRecord.goal_target || '0', 'objetivo de meta')
-    if (target > 0) {
-      const goal: SavingsGoal = {
-        name: goalRecord.goal_name || 'Meta de ahorro',
-        savedMinor: amountToMinor((isLegacy ? goalRecord.goal_current : goalRecord.goal_saved) || '0', 'avance de meta'),
-        targetMinor: target,
+  const snapshot = emptySnapshot()
+  for (const { record, line } of toRecords(rows)) {
+    rowError(line, () => {
+      switch (record.record_type) {
+        case 'profile':
+        case 'summary': // v2
+          snapshot.profile = { name: (isLegacy ? record.user_name : record.profile_name) ?? '' }
+          break
+        case 'category':
+          snapshot.categories.push({ type: record.type as MovementType, name: record.category })
+          break
+        case 'goal': {
+          const targetMinor = amountToMinor(record.goal_target || '0', 'objetivo de meta')
+          if (targetMinor <= 0) break // v2 always wrote an empty goal row
+          snapshot.goals.push({
+            id: record.id || undefined,
+            name: record.goal_name || 'Meta de ahorro',
+            savedMinor: amountToMinor((isLegacy ? record.goal_current : record.goal_saved) || '0', 'avance de meta'),
+            targetMinor,
+            targetDate: record.goal_target_date || null,
+          })
+          break
+        }
+        case 'movement': {
+          const type = record.type as MovementType
+          if (!MOVEMENT_TYPES.includes(type)) throw new DomainError('tipo de registro desconocido.')
+          const hasCreatedAt = Boolean(record.created_at) && !Number.isNaN(Date.parse(record.created_at))
+          // v2 files have no occurrence date: the creation time is the only date available.
+          const createdAt = hasCreatedAt ? record.created_at : isLegacy ? now.toISOString() : undefined
+          const occurredOn = isLegacy ? toIsoDate(new Date(createdAt!)) : record.occurred_on
+          if (!isIsoDate(occurredOn)) throw new DomainError('la fecha no es válida.')
+          snapshot.movements.push({
+            id: record.id || undefined,
+            type,
+            description: record.description,
+            category: record.category,
+            amountMinor: amountToMinor(record.amount, 'movimiento'),
+            occurredOn,
+            note: record.note || null,
+            createdAt,
+            updatedAt: record.updated_at || createdAt,
+          })
+          break
+        }
+        default:
+          break
       }
-      state.goal = normalizeGoal(goal)
-    }
-  }
-
-  const seen = new Set<string>()
-  state.movements = records
-    .map((record, index) => ({ record, line: index + 2 }))
-    .filter(({ record }) => record.record_type === 'movement')
-    .map(({ record, line }) => {
-      const movement = buildMovement(record, line, isLegacy, now)
-      if (seen.has(movement.id)) movement.id = newId()
-      seen.add(movement.id)
-      return movement
     })
-    .sort(compareMovements)
-
-  return state
+  }
+  return normalizeSnapshot(snapshot)
 }

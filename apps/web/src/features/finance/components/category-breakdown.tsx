@@ -1,16 +1,14 @@
 'use client'
 
-import { formatMoney } from '@kaligula/domain'
+import { formatMoney, type CategoryShare } from '@kaligula/domain'
 import { PieChart } from 'lucide-react'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/panel'
-import { useCategoryBreakdown } from '../use-finance'
 
 const percent = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
 const MAX_ROWS = 5
 
 /** Magnitude per category: single hue (expense), sorted, with direct value labels. */
-export function CategoryBreakdown({ className }: { className?: string }) {
-  const breakdown = useCategoryBreakdown('expense')
+export function CategoryBreakdown({ breakdown, className }: { breakdown: readonly CategoryShare[]; className?: string }) {
   const rows = breakdown.slice(0, MAX_ROWS)
   const rest = breakdown.slice(MAX_ROWS)
   if (rest.length) {

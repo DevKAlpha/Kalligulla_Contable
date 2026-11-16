@@ -1,12 +1,36 @@
 # Production-like run: docker compose up --build -d  ->  http://localhost:8080
+# The app has no login yet, so ports are published on 127.0.0.1 only. See README before exposing it.
 services:
+  db:
+    image: postgres:17-alpine
+    container_name: kaligula-db
+    environment:
+      POSTGRES_DB: kaligula
+      POSTGRES_USER: kaligula
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kaligula-local}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaligula -d kaligula"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: kaligula-web
+    environment:
+      DATABASE_URL: postgres://kaligula:${POSTGRES_PASSWORD:-kaligula-local}@db:5432/kaligula
+      KALIGULA_ALLOWED_HOSTS: ${KALIGULA_ALLOWED_HOSTS:-}
+      AWESOMEAPI_KEY: ${AWESOMEAPI_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - "8080:3000"
+      - "127.0.0.1:8080:3000"
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -14,3 +38,6 @@ services:
       - /app/apps/web/.next/cache
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  pgdata:

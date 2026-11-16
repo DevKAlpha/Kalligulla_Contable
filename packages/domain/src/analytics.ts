@@ -1,30 +1,48 @@
 import { monthKey, shiftMonth } from './dates'
 import type { Movement, MovementType } from './types'
 
+type Flow = Pick<Movement, 'type' | 'amountMinor' | 'occurredOn'>
+
 export interface PeriodTotals {
   incomeMinor: number
   expenseMinor: number
   netMinor: number
 }
 
-export interface Summary {
+export interface CashFlowMonth {
+  key: string
+  incomeMinor: number
+  expenseMinor: number
+}
+
+export interface CategoryShare {
+  category: string
+  amountMinor: number
+  count: number
+  sharePct: number
+}
+
+export interface Overview {
   /** All-time income minus all-time expenses. Investments and loans are tracked separately. */
   balanceMinor: number
   totals: Record<MovementType, number>
   counts: Record<MovementType, number>
   currentMonth: PeriodTotals
   previousMonth: PeriodTotals
-  /** Change of this month's net versus last month's, in percent. `null` when last month has no activity. */
+  /** Change of this month's net versus last month's, in percent. `null` when last month has no net. */
   monthlyChangePct: number | null
   /** Share of this month's income spent this month, in percent. `null` without income. */
   expenseRatioPct: number | null
+  cashFlow: CashFlowMonth[]
+  /** Current month's expenses by category, largest first. */
+  expenseBreakdown: CategoryShare[]
 }
 
-function emptyByType(): Record<MovementType, number> {
+export function emptyByType(): Record<MovementType, number> {
   return { income: 0, expense: 0, investment: 0, loan: 0 }
 }
 
-function periodTotals(movements: readonly Movement[], key: string): PeriodTotals {
+export function periodTotals(movements: readonly Flow[], key: string): PeriodTotals {
   let incomeMinor = 0
   let expenseMinor = 0
   for (const movement of movements) {
@@ -35,38 +53,7 @@ function periodTotals(movements: readonly Movement[], key: string): PeriodTotals
   return { incomeMinor, expenseMinor, netMinor: incomeMinor - expenseMinor }
 }
 
-/** Every figure is derived from the movements, so totals can never drift from the records. */
-export function deriveSummary(movements: readonly Movement[], reference: Date = new Date()): Summary {
-  const totals = emptyByType()
-  const counts = emptyByType()
-  for (const movement of movements) {
-    totals[movement.type] += movement.amountMinor
-    counts[movement.type] += 1
-  }
-  const currentKey = monthKey(reference)
-  const currentMonth = periodTotals(movements, currentKey)
-  const previousMonth = periodTotals(movements, shiftMonth(currentKey, -1))
-  const hasPrevious = previousMonth.incomeMinor !== 0 || previousMonth.expenseMinor !== 0
-  return {
-    balanceMinor: totals.income - totals.expense,
-    totals,
-    counts,
-    currentMonth,
-    previousMonth,
-    monthlyChangePct: hasPrevious && previousMonth.netMinor !== 0
-      ? ((currentMonth.netMinor - previousMonth.netMinor) / Math.abs(previousMonth.netMinor)) * 100
-      : null,
-    expenseRatioPct: currentMonth.incomeMinor > 0 ? (currentMonth.expenseMinor / currentMonth.incomeMinor) * 100 : null,
-  }
-}
-
-export interface CashFlowMonth {
-  key: string
-  incomeMinor: number
-  expenseMinor: number
-}
-
-export function buildCashFlow(movements: readonly Movement[], months = 6, reference: Date = new Date()): CashFlowMonth[] {
+export function buildCashFlow(movements: readonly Flow[], months = 6, reference: Date = new Date()): CashFlowMonth[] {
   const currentKey = monthKey(reference)
   const series = Array.from({ length: months }, (_, index) => ({
     key: shiftMonth(currentKey, index - (months - 1)),
@@ -83,15 +70,8 @@ export function buildCashFlow(movements: readonly Movement[], months = 6, refere
   return series
 }
 
-export interface CategoryShare {
-  category: string
-  amountMinor: number
-  count: number
-  sharePct: number
-}
-
 export function categoryBreakdown(
-  movements: readonly Movement[],
+  movements: readonly Pick<Movement, 'type' | 'amountMinor' | 'occurredOn' | 'category'>[],
   type: MovementType = 'expense',
   month?: string,
 ): CategoryShare[] {
@@ -109,4 +89,39 @@ export function categoryBreakdown(
   return [...totals.entries()]
     .map(([category, entry]) => ({ category, ...entry, sharePct: grand ? (entry.amountMinor / grand) * 100 : 0 }))
     .sort((a, b) => b.amountMinor - a.amountMinor)
+}
+
+export interface OverviewInput {
+  /** All-time totals and counts per type (usually aggregated by the database). */
+  totals: Record<MovementType, number>
+  counts: Record<MovementType, number>
+  /** Movements inside the cash-flow window (at least the last `months` months). */
+  recent: readonly Pick<Movement, 'type' | 'amountMinor' | 'occurredOn' | 'category'>[]
+  months?: number
+  reference?: Date
+}
+
+/** Every figure is derived from stored movements, so totals can never drift from the records. */
+export function buildOverview({ totals, counts, recent, months = 6, reference = new Date() }: OverviewInput): Overview {
+  const currentKey = monthKey(reference)
+  const currentMonth = periodTotals(recent, currentKey)
+  const previousMonth = periodTotals(recent, shiftMonth(currentKey, -1))
+  return {
+    balanceMinor: totals.income - totals.expense,
+    totals: { ...totals },
+    counts: { ...counts },
+    currentMonth,
+    previousMonth,
+    monthlyChangePct: previousMonth.netMinor !== 0
+      ? ((currentMonth.netMinor - previousMonth.netMinor) / Math.abs(previousMonth.netMinor)) * 100
+      : null,
+    expenseRatioPct: currentMonth.incomeMinor > 0 ? (currentMonth.expenseMinor / currentMonth.incomeMinor) * 100 : null,
+    cashFlow: buildCashFlow(recent, months, reference),
+    expenseBreakdown: categoryBreakdown(recent, 'expense', currentKey),
+  }
+}
+
+/** First day of the cash-flow window, as `YYYY-MM-DD`. */
+export function overviewWindowStart(months = 6, reference: Date = new Date()): string {
+  return `${shiftMonth(monthKey(reference), -(months - 1))}-01`
 }

@@ -1,2 +1,5 @@
-export { createApp, createDefaultApp, API_VERSION, type AppDependencies, type KaligulaApp } from './app'
+export { createApp, API_VERSION, type AppDependencies, type KaligulaApp } from './app'
+export { createRuntime, getRuntime, type Runtime } from './runtime'
+export { LOCAL_OWNER } from './modules/identity/owner'
 export type { TrmProvider, TrmReading } from './modules/market-data/domain/trm-provider'
+export type { FxProvider, FxReading } from './modules/market-data/domain/fx-provider'

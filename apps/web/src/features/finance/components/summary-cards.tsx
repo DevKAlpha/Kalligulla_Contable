@@ -1,11 +1,12 @@
 'use client'
 
+import type { OverviewDto } from '@kaligula/contracts'
 import { formatMoney } from '@kaligula/domain'
 import { ArrowDownLeft, ArrowUpRight, TrendingDown, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Eyebrow } from '@/components/ui/panel'
+import { Skeleton } from '@/components/ui/states'
 import { cn } from '@/lib/cn'
-import { useSummary } from '../use-finance'
 
 const percent = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
@@ -25,20 +26,30 @@ function StatCard({ icon, iconClass, label, value, footer }: { icon: ReactNode; 
   )
 }
 
-export function SummaryCards() {
-  const summary = useSummary()
-  const { currentMonth, monthlyChangePct, expenseRatioPct } = summary
+const GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-[1.55fr_1fr_1fr_1fr]'
+
+export function SummaryCardsSkeleton() {
+  return (
+    <div className={GRID} aria-hidden>
+      <Skeleton className="col-span-2 h-36 rounded-2xl sm:col-span-3 xl:col-span-1" />
+      {[0, 1, 2].map((key) => <Skeleton key={key} className="col-span-2 h-[72px] rounded-2xl sm:col-span-1 sm:h-36" />)}
+    </div>
+  )
+}
+
+export function SummaryCards({ overview }: { overview: OverviewDto }) {
+  const { currentMonth, monthlyChangePct, expenseRatioPct } = overview
   const trendUp = (monthlyChangePct ?? 0) >= 0
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-[1.55fr_1fr_1fr_1fr]">
+    <div className={GRID}>
       <article className="relative col-span-2 overflow-hidden rounded-2xl border-2 border-outline bg-bezel p-5 text-white sm:col-span-3 xl:col-span-1">
         <div className="flex items-center justify-between gap-2">
           <Eyebrow className="text-bezel-text">Saldo disponible</Eyebrow>
-          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-mono text-[10px] tracking-[0.12em] text-accent uppercase">En vivo</span>
+          <span className="rounded-full border border-accent/40 px-2 py-0.5 font-mono text-[10px] tracking-[0.12em] text-accent uppercase">Guardado</span>
         </div>
         <strong className="mt-3 block truncate text-[clamp(1.9rem,4vw,2.6rem)] leading-none font-semibold tracking-tight tabular-nums">
-          {formatMoney(summary.balanceMinor)}
+          {formatMoney(overview.balanceMinor)}
         </strong>
         <p className="mt-3 max-w-[30ch] text-[13px] text-bezel-text">Ingresos menos gastos de todo tu historial.</p>
         <div aria-hidden className="pointer-events-none absolute -right-3 -bottom-4 h-20 w-28 opacity-40">
@@ -53,7 +64,7 @@ export function SummaryCards() {
         icon={<ArrowDownLeft size={17} aria-hidden />}
         iconClass="bg-income-soft text-income"
         value={formatMoney(currentMonth.incomeMinor)}
-        footer={`Histórico ${formatMoney(summary.totals.income, { compact: true })}`}
+        footer={`Histórico ${formatMoney(overview.totals.income, { compact: true })}`}
       />
       <StatCard
         label="Gastos del mes"

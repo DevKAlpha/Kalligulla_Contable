@@ -1,23 +1,26 @@
 {
   "name": "@kaligula/web",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@kaligula/api": "0.3.0",
-    "@kaligula/contracts": "0.3.0",
-    "@kaligula/domain": "0.3.0",
+    "@kaligula/api": "0.4.0",
+    "@kaligula/contracts": "0.4.0",
+    "@kaligula/db": "0.4.0",
+    "@kaligula/domain": "0.4.0",
+    "@tanstack/react-query": "5.105.1",
     "clsx": "2.1.1",
     "lucide-react": "1.66.0",
-    "next": "16.4.3",
+    "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "zod": "4.6.7",
     "zustand": "5.0.16"
   },
   "devDependencies": {

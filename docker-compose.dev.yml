@@ -1,19 +1,41 @@
 # Development with hot reload: docker compose -f docker-compose.dev.yml up  ->  http://localhost:3000
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: kaligula
+      POSTGRES_USER: kaligula
+      POSTGRES_PASSWORD: kaligula-dev
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaligula -d kaligula"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   web:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --hostname 0.0.0.0"
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -w @kaligula/web -- --hostname 0.0.0.0"
     environment:
+      DATABASE_URL: postgres://kaligula:kaligula-dev@db:5432/kaligula
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - .:/app
       - node_modules:/app/node_modules
       - next_cache:/app/apps/web/.next
+
 volumes:
+  pgdata_dev:
   node_modules:
   next_cache:

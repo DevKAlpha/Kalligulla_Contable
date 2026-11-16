@@ -1,12 +1,12 @@
 {
   "name": "@kaligula/desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Kaligula para escritorio: Electron ejecuta el servidor standalone de Next.js en local.",
   "author": "Kaligula Finance",
   "main": "main.cjs",
   "scripts": {
-    "dev": "concurrently -k -n web,desktop \"npm run dev -w @kaligula/web\" \"wait-on http://localhost:3000 && electron .\"",
+    "dev": "concurrently -k -n web,desktop \"npm run dev -w @kaligula/web\" \"wait-on http://127.0.0.1:3000/api/health && electron .\"",
     "prepare:web": "node scripts/prepare-web.mjs",
     "dist:win": "npm run prepare:web && electron-builder --win portable",
     "dist": "npm run prepare:web && electron-builder"

@@ -5,7 +5,9 @@ const config: NextConfig = {
   // Self-contained server for Docker and the Electron desktop build.
   output: 'standalone',
   outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
-  transpilePackages: ['@kaligula/domain', '@kaligula/contracts', '@kaligula/api'],
+  transpilePackages: ['@kaligula/domain', '@kaligula/contracts', '@kaligula/api', '@kaligula/db'],
+  // Database drivers stay as regular Node modules (PGlite loads its WebAssembly files at runtime).
+  serverExternalPackages: ['@electric-sql/pglite', 'pg'],
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {

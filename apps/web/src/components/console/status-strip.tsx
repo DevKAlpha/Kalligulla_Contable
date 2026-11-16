@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useHealth } from '@/features/finance/queries'
 import { useTrm } from '@/features/market/use-trm'
 import { cn } from '@/lib/cn'
 
@@ -20,17 +21,31 @@ function Clock() {
 }
 
 function TrmIndicator() {
-  const trm = useTrm()
-  if (trm.status === 'loading') return <span className="text-bezel-text/70">TRM …</span>
-  if (trm.status === 'error') {
-    return <span title="No fue posible consultar la TRM oficial">TRM sin conexión</span>
-  }
-  const { quote } = trm
+  const { data: quote, isError, isPending } = useTrm()
+  if (isPending) return <span className="text-bezel-text/70">TRM …</span>
+  if (isError || !quote) return <span title="No fue posible consultar la TRM oficial">TRM sin conexión</span>
   const validity = `Vigente ${dayFormat.format(new Date(`${quote.validFrom}T00:00:00Z`))} – ${dayFormat.format(new Date(`${quote.validTo}T00:00:00Z`))}`
   return (
     <span title={`${validity} · ${quote.source}${quote.stale ? ' · valor en caché' : ''}`} className="tabular-nums">
       <span className="text-bezel-text/70">TRM</span>{' '}
       <span className="text-white">{rateFormat.format(quote.rate)}</span>
+    </span>
+  )
+}
+
+/** Storage status: where data is saved and whether the database answers. */
+function DatabaseIndicator() {
+  const { data, isError, isPending } = useHealth()
+  const up = data?.database.status === 'ok'
+  const engine = data?.database.engine === 'postgres' ? 'PostgreSQL' : 'BD local'
+  const label = isPending ? 'BD …' : up ? engine : 'BD sin conexión'
+  return (
+    <span
+      className="hidden items-center gap-1.5 sm:flex"
+      title={up ? `Tus datos se guardan en ${data?.database.engine === 'postgres' ? 'PostgreSQL' : 'la base de datos local (PGlite)'}` : 'No hay conexión con la base de datos'}
+    >
+      <span aria-hidden className={cn('size-1.5 rounded-full', isPending ? 'bg-bezel-text/50' : up && !isError ? 'bg-[#5fd394]' : 'bg-[#ff8a6b]')} />
+      {label}
     </span>
   )
 }
@@ -45,10 +60,7 @@ export function StatusStrip({ className }: { className?: string }) {
         <span className="hidden text-bezel-text/60 md:inline">· Finance terminal</span>
       </div>
       <div className="flex shrink-0 items-center gap-3" aria-label="Estado del sistema">
-        <span className="hidden items-center gap-1.5 sm:flex" title="Tus datos se guardan en este dispositivo">
-          <span aria-hidden className="size-1.5 rounded-full bg-[#5fd394]" />
-          Datos locales
-        </span>
+        <DatabaseIndicator />
         <TrmIndicator />
         <span aria-hidden className="h-3 w-px bg-bezel-text/30" />
         <Clock />

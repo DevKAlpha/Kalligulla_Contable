@@ -3,7 +3,6 @@
 import { formatMoney, type CashFlowMonth } from '@kaligula/domain'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import { cn } from '@/lib/cn'
-import { useCashFlow } from '../use-finance'
 
 const monthShort = new Intl.DateTimeFormat('es-CO', { month: 'short' })
 const monthLong = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' })
@@ -52,8 +51,7 @@ function MonthColumn({ month, max, align }: { month: CashFlowMonth; max: number;
   )
 }
 
-export function CashFlowChart({ className }: { className?: string }) {
-  const flow = useCashFlow(6)
+export function CashFlowChart({ flow, className }: { flow: readonly CashFlowMonth[]; className?: string }) {
   const hasData = flow.some((month) => month.incomeMinor || month.expenseMinor)
   const max = niceMax(Math.max(0, ...flow.flatMap((month) => [month.incomeMinor, month.expenseMinor])))
   const ticks = [max, max / 2, 0]

@@ -1,88 +1,126 @@
 # Kaligula
 
-Kaligula es una consola financiera personal. Sirve para registrar ingresos, gastos, inversiones, préstamos y una meta de ahorro. Su interfaz imita una consola de bolsillo propia, la **K-1**, y se usa como web instalable (PWA) o como programa de escritorio (Electron).
+Kaligula es una consola financiera personal. Sirve para registrar ingresos, gastos, inversiones y préstamos, organizarlos con categorías propias y seguir varias metas de ahorro. También muestra el tipo de cambio del dólar, el euro y el won en pesos colombianos, en tiempo real. Su interfaz imita una consola de bolsillo propia, la **K-1**, y se usa como web instalable (PWA) o como programa de escritorio (Electron).
 
 ## Stack
 
 | Capa | Tecnología |
 |---|---|
 | Web | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
-| Estado del cliente | Zustand (persistido en `localStorage`) |
+| Datos en el cliente | TanStack Query (caché de servidor); Zustand solo para el estado de la interfaz |
 | API | Hono, montada en Next.js en `/api`; también puede correr sola en Node |
+| Base de datos | PostgreSQL (servidores y Docker) o PGlite (Postgres embebido: escritorio y desarrollo), con Drizzle ORM |
 | Validación de contratos | Zod |
+| Tiempo real | Server-Sent Events (`/api/market/fx/stream`) |
 | Escritorio | Electron, que ejecuta el servidor standalone de Next.js en local |
 | Calidad | ESLint, `tsc` estricto, Vitest |
-| Despliegue | Docker con imagen multi-stage `node:22-alpine` |
+| Despliegue | Docker con imagen multi-stage `node:22-alpine` y PostgreSQL 17 |
 
-Requisitos: **Node.js 22.12 o superior** (ver `.nvmrc`) y npm 10 o superior. Docker Desktop solo hace falta para la versión contenedorizada.
+Requisitos: **Node.js 22.12 o superior** (ver `.nvmrc`) y npm 10 o superior. Docker Desktop solo hace falta para la versión contenedorizada. Para desarrollar **no hace falta instalar PostgreSQL**: sin `DATABASE_URL`, la app usa PGlite.
 
 ## Arquitectura
 
-El proyecto es un monorepo con npm workspaces, organizado como un **monolito modular hexagonal**. Cada módulo de la API recibe sus dependencias por inyección, por lo que puede extraerse más adelante a un microservicio sin reescribirse.
+El proyecto es un monorepo con npm workspaces, organizado como un **monolito modular hexagonal**. Cada módulo de la API tiene sus puertos (interfaces), sus casos de uso y sus adaptadores, y recibe sus dependencias por inyección. Así puede extraerse más adelante a un microservicio sin reescribirse.
 
 ```text
 KALIGULLA/
 ├── apps/
-│   ├── web/            Next.js: interfaz, rutas y montaje de la API en /api
+│   ├── web/                 Next.js: interfaz, rutas y montaje de la API en /api
 │   │   └── src/
 │   │       ├── app/                 Rutas: /, /gastos, /inversiones, /prestamos, /api/*
 │   │       ├── components/console/  Carcasa K-1: rieles, teclas, bisel, deck móvil
-│   │       ├── components/ui/       Sistema de diseño: Button, Panel, Dialog, Field, Toast
-│   │       ├── features/finance/    Store, hooks, componentes y vistas financieras
-│   │       ├── features/market/     TRM en vivo
+│   │       ├── components/ui/       Sistema de diseño: Button, Panel, Dialog, Field, Toast, estados
+│   │       ├── features/finance/    Consultas (TanStack Query), diálogos CRUD y vistas
+│   │       ├── features/market/     Tablero de divisas en vivo y TRM
 │   │       ├── features/theme/      Tema claro / oscuro / sistema
-│   │       └── features/ui/         Estado de diálogos y avisos
-│   └── desktop/        Electron: arranca el servidor standalone y abre la ventana
+│   │       ├── features/ui/         Estado de diálogos y avisos
+│   │       └── lib/api-client.ts    Cliente tipado de la API (valida cada respuesta)
+│   └── desktop/             Electron: arranca el servidor standalone y abre la ventana
 ├── packages/
-│   ├── domain/         Reglas puras sin I/O: dinero, movimientos, analítica, metas, CSV, migración
-│   ├── contracts/      Esquemas Zod compartidos entre la API y los clientes
-│   └── api/            Hono con módulos hexagonales (health, market-data)
-│       └── src/modules/market-data/{domain,application,infrastructure,http}
-├── scripts/            Generador de íconos
-├── Dockerfile, docker-compose.yml, docker-compose.dev.yml
+│   ├── domain/              Reglas puras sin I/O: dinero, movimientos, categorías, metas, analítica, CSV, divisas
+│   ├── contracts/           Esquemas Zod compartidos entre la API y los clientes
+│   ├── db/                  Esquema Drizzle, migraciones SQL versionadas y conexión PostgreSQL/PGlite
+│   └── api/                 Hono, organizada en módulos
+│       └── src/modules/
+│           ├── identity/    Dueño de los datos y perfil
+│           ├── ledger/      Categorías, movimientos y resumen (ports · servicio · repositorio Drizzle · rutas)
+│           ├── goals/       Metas de ahorro
+│           ├── backup/      Exportar y restaurar respaldos
+│           ├── market-data/ TRM y divisas en vivo (proveedores intercambiables)
+│           └── health/      Estado del servicio y de la base de datos
+├── Dockerfile, docker-compose.yml, docker-compose.dev.yml, .env.example
 └── vitest.config.ts, eslint.config.js, tsconfig.base.json
 ```
 
 Reglas que mantienen el código portable a Bun:
 - `packages/domain` no puede importar módulos de Node ni frameworks. Una regla de ESLint lo verifica.
 - La API usa solo APIs web estándar (`fetch`, `Request`/`Response`, `AbortSignal`, Web Crypto).
-- Cada app tiene un único punto de arranque. Hoy es `packages/api/src/main.node.ts`; un futuro `main.bun.ts` exportaría `{ fetch: app.fetch }`.
+- Los drivers de base de datos (`pg`, PGlite) son JavaScript puro, sin addons nativos.
+- Cada app tiene un único punto de arranque. Hoy es `packages/api/src/main.node.ts`; un futuro `main.bun.ts` exportaría `{ fetch: runtime.app.fetch }`.
 
 ## Funciones
 
-- **Panel de inicio:**
-  - saldo disponible, junto con los ingresos, gastos y ahorro del mes;
-  - variación del ahorro frente al mes anterior.
-- **Gráfica de flujo de 6 meses** con tooltips, navegable con teclado y con una tabla accesible para lectores de pantalla.
-- **Gastos por categoría** del mes en curso.
-- **Registros:**
-  - alta y edición con fecha real, categorías según el tipo y una nota opcional;
-  - al eliminar aparece la opción **Deshacer**.
-- **Módulos de Gastos, Inversiones y Préstamos** con historial agrupado por mes, búsqueda y filtros.
-- **Meta de ahorro** con barra de progreso.
-- **Perfil editable:** el nombre ya no está fijo en el código.
-- **TRM oficial en vivo** en el bisel de la consola. La consulta `/api/market/trm` va a datos.gov.co, guarda caché 30 minutos y, si la fuente falla, sirve el último valor conocido.
-- **Tema claro, oscuro o del sistema**, sin parpadeo al cargar la página.
-- **Respaldo CSV:**
-  - exporta e importa los datos, protegiéndolos contra inyección de fórmulas;
-  - antes de reemplazar los datos pide confirmación;
-  - acepta los respaldos de la versión anterior.
-- **Totales siempre derivados** de los movimientos: ya no se guardan aparte, así que no pueden desincronizarse.
+### CRUD con almacenamiento en base de datos
+
+Todo se guarda en la base de datos, no en el navegador. Cada operación pasa por la API, que valida los datos.
+
+| Entidad | Crear | Leer | Actualizar | Eliminar |
+|---|---|---|---|---|
+| Movimientos | Diálogo «Nuevo registro» | Listas con búsqueda, filtros por tipo, categoría y periodo, y paginación | Edición completa | Inmediato, con **Deshacer** (restaura el mismo registro) |
+| Categorías | Desde «Categorías» o directamente en el formulario del registro | Con el número de registros de cada una | Renombrar | Sus registros pasan a «Otro» |
+| Metas | Varias metas, con fecha objetivo opcional | Progreso y aporte mensual sugerido | Edición y botón «Aportar» | Con confirmación |
+| Perfil | — | Nombre en la consola | Nombre | — |
+
+Además:
+- **Totales siempre derivados** de los registros guardados, así que nunca se desincronizan: saldo, ingresos, gastos y ahorro del mes, variación frente al mes anterior, gráfica de 6 meses y gastos por categoría.
 - **Montos en unidades mínimas** (enteros), con el campo `currency` listo para manejar varias monedas.
+- **Respaldo CSV:** exporta e importa todo (registros, categorías, metas y perfil), con protección contra inyección de fórmulas. Antes de reemplazar los datos pide confirmación. Acepta los respaldos de todas las versiones anteriores.
+- **Migración de datos antiguos:** si este navegador o el escritorio tienen datos de una versión anterior y la base de datos está vacía, el inicio ofrece importarlos con un clic. La copia antigua se conserva.
 
-### Datos de la versión anterior
+### Divisas en tiempo real
 
-La primera vez que se abre la nueva versión, se migran automáticamente los datos guardados en `localStorage` bajo `kaligula.finance.v2`. La clave antigua se conserva como copia de seguridad.
+El inicio muestra **USD, EUR y KRW (won surcoreano) en COP**. Para el USD muestra también la TRM oficial.
 
-> El ejecutable de escritorio cambia de origen (antes `file://`, ahora `http://127.0.0.1:47821`), así que no ve los datos de la versión 0.2. Para trasladarlos, exporta el CSV en la versión anterior e impórtalo en la nueva.
+- **Cómo se actualiza:** el servidor consulta la fuente cada 60 segundos (`FX_REFRESH_SECONDS`), pero solo mientras alguien tiene la consola abierta. Cada actualización llega a todos los clientes por **Server-Sent Events**, sin recargar la página. Si se pierde la conexión, el navegador se reconecta solo.
+- **Fuente principal:** AwesomeAPI, con precio medio de mercado durante el día. EUR y KRW se calculan cruzando a través del USD, el par con más liquidez: `COP por X = (USD→COP) ÷ (USD→X)`.
+- **Respaldo:** si la fuente principal falla, se usa ExchangeRate-API (tasa diaria), indicado en pantalla. Si ninguna responde, se muestra el último valor con el aviso «Fuente en pausa».
+- **Ritmo real del mercado:** el mercado USD/COP opera en horario hábil de Colombia, así que fuera de ese horario el valor puede no cambiar aunque la consulta se repita.
+- **Más monedas:** para agregar otra moneda basta con añadir su código en `packages/domain/src/currencies.ts`.
+
+### Otras funciones
+
+- **TRM oficial** en el bisel de la consola, desde datos.gov.co, con caché de 30 minutos.
+- **Estado de la base de datos** en el bisel: «BD local» (PGlite), «PostgreSQL» o «BD sin conexión».
+- **Tema claro, oscuro o del sistema**, sin parpadeo al cargar.
+
+## Dónde se guardan los datos
+
+| Cómo se ejecuta | Base de datos | Ubicación |
+|---|---|---|
+| `npm run dev` / `npm run start` | PGlite | `apps/web/.data/pglite` (ignorado por git) |
+| Escritorio (`.exe`) | PGlite | `%APPDATA%\@kaligula\desktop\database` |
+| Docker (`docker compose up`) | PostgreSQL 17 | Volumen `pgdata` |
+| Cualquiera con `DATABASE_URL` | PostgreSQL | El servidor indicado |
+
+Las migraciones (`packages/db/src/migrations.ts`) se aplican solas al arrancar, en orden y una sola vez. Nunca se edita una migración publicada: se añade una nueva.
+
+## Seguridad (todavía sin inicio de sesión)
+
+La app aún no tiene cuentas de usuario: todos los datos pertenecen a un único dueño local. Las tablas ya llevan `owner_id`, así que las cuentas podrán añadirse sin migrar datos. Mientras tanto:
+
+- **Solo localhost:** el servidor escucha únicamente en `127.0.0.1` (desarrollo, `start`, escritorio y los puertos de Docker).
+- **Host permitido:** la API solo responde si el host es `localhost`, `127.0.0.1` o `[::1]`, lo que bloquea ataques de *DNS rebinding*. Para servirla con otro nombre o IP, agrégalo en `KALIGULA_ALLOWED_HOSTS`.
+- **Escrituras del mismo origen:** las operaciones que modifican datos exigen JSON y una petición del mismo origen (`Origin` / `Sec-Fetch-Site`), como protección contra CSRF.
+
+> No expongas la app a Internet ni a redes en las que no confíes hasta que exista el inicio de sesión.
 
 ## Diseño responsive
 
 | Ancho | Presentación |
 |---|---|
-| < 768 px (móvil) | Consola vertical: pantalla arriba; deck inferior con las 4 teclas de módulo y la tecla «+» central. Las tarjetas se muestran como filas compactas. |
-| 768–1023 px (tableta) | La misma consola, centrada y más ancha; el resumen se muestra en 3 columnas. |
-| ≥ 1024 px (escritorio) | Consola horizontal con riel izquierdo (módulos), pantalla central y riel derecho (Nuevo, Meta, Respaldo, Tema). |
+| < 768 px (móvil) | Consola vertical: pantalla arriba y deck inferior con las 4 teclas de módulo y la tecla «+» central. Tarjetas y cotizaciones en filas compactas. |
+| 768–1023 px (tableta) | La misma consola, centrada y más ancha; resumen y divisas en 3 columnas. |
+| ≥ 1024 px (escritorio) | Consola horizontal: riel izquierdo con los módulos, pantalla central y riel derecho con Nuevo, Metas, Categorías, Respaldo y Tema. |
 
 Los tokens de color se definen en `apps/web/src/app/globals.css`, en las variables `:root` y `[data-theme="dark"]`. La paleta de la gráfica (violeta para ingresos, naranja para gastos) está validada para daltonismo en ambos temas.
 
@@ -90,7 +128,7 @@ Los tokens de color se definen en `apps/web/src/app/globals.css`, en las variabl
 
 ```bash
 npm install
-npm run dev            # http://localhost:3000
+npm run dev            # http://localhost:3000 (crea la base local en apps/web/.data)
 ```
 
 | Comando | Uso |
@@ -99,7 +137,7 @@ npm run dev            # http://localhost:3000
 | `npm run build` | Compilación de producción (standalone) |
 | `npm run start` | Sirve la compilación de producción |
 | `npm run api:dev` | API sola en `http://127.0.0.1:4000/api` |
-| `npm run test` | Pruebas con Vitest (dominio, API, store) |
+| `npm run test` | Pruebas con Vitest: dominio, base de datos, API (sobre PGlite en memoria) y cliente web |
 | `npm run typecheck` | `tsc` estricto en todos los workspaces |
 | `npm run lint` | ESLint |
 | `npm run check` | lint + typecheck + test |
@@ -107,33 +145,50 @@ npm run dev            # http://localhost:3000
 | `npm run desktop:win` | Ejecutable portátil para Windows en `release/` |
 | `npm run icons` | Regenera los íconos de `apps/web/public/` |
 
+Las variables de entorno están documentadas en `.env.example`.
+
 ## Docker
 
 ```bash
-docker compose up --build -d                     # producción: http://localhost:8080
+cp .env.example .env                             # cambia POSTGRES_PASSWORD
+docker compose up --build -d                     # producción: http://localhost:8080 (web + PostgreSQL)
 docker compose -f docker-compose.dev.yml up      # desarrollo con recarga: http://localhost:3000
-docker compose down
+docker compose down                              # detiene (los datos quedan en el volumen)
 ```
 
-La imagen de producción tiene estas características:
+La imagen de producción:
 - corre como un usuario sin privilegios y con el sistema de archivos en solo lectura;
-- incluye un healthcheck sobre `/api/health`;
+- incluye un healthcheck sobre `/api/health`, que también comprueba la base de datos;
+- espera a que PostgreSQL esté listo antes de arrancar;
 - para pasar a Bun basta con cambiar la imagen base y el comando de arranque.
 
 ## API
 
-| Método | Ruta | Respuesta |
+Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores siguen el formato `{ "error": { "code", "message", "field?" } }`.
+
+| Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/health` | `{ status, service, version, time }` |
-| GET | `/api/market/trm` | TRM oficial (`rate`, `validFrom`, `validTo`, `source`, `stale`), o `503` si no está disponible |
+| GET | `/api/health` | Estado del servicio y de la base de datos (`503` si la base no responde) |
+| GET · PUT | `/api/profile` | Leer y actualizar el perfil |
+| GET · POST | `/api/categories` | Listar (con número de registros) y crear |
+| PATCH · DELETE | `/api/categories/:id` | Renombrar; eliminar moviendo sus registros a «Otro» (`409` para categorías del sistema o nombres repetidos) |
+| GET · POST | `/api/movements` | Listar (`type`, `categoryId`, `from`, `to`, `q`, `limit`, `offset`) y crear (acepta un `id` propio para deshacer) |
+| GET · PUT · DELETE | `/api/movements/:id` | Leer, reemplazar y eliminar |
+| GET · POST | `/api/goals` | Listar y crear metas |
+| PUT · DELETE | `/api/goals/:id` | Actualizar y eliminar |
+| GET | `/api/overview` | Resumen calculado: saldo, mes actual y anterior, flujo de 6 meses, gastos por categoría |
+| GET | `/api/backup` | Exportar todo como respaldo |
+| POST | `/api/backup/restore` | Reemplazar todo con un respaldo (transacción atómica, máximo 20 MB) |
+| GET | `/api/market/trm` | TRM oficial, o `503` si no está disponible |
+| GET | `/api/market/fx` | USD, EUR y KRW en COP |
+| GET | `/api/market/fx/stream` | Las mismas cotizaciones en vivo, por Server-Sent Events (evento `snapshot`) |
 
 ## Próximas fases
 
-Están definidas en el plan de la Etapa 1:
-1. Cuentas de usuario, PostgreSQL y sincronización entre dispositivos.
+1. Cuentas de usuario e inicio de sesión, y sincronización entre dispositivos.
 2. Detección de gastos hormiga y gastos recurrentes.
-3. Presupuestos y varias metas.
-4. Varias monedas usando la TRM de la fecha de cada movimiento.
+3. Presupuestos por categoría.
+4. Movimientos en varias monedas, usando la TRM de la fecha de cada uno.
 5. Importación de extractos bancarios.
 6. Portafolio con precios en vivo.
 7. Consejos (insights) basados en reglas.

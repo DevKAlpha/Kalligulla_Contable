@@ -1,46 +1,57 @@
 'use client'
 
+import type { MovementDto } from '@kaligula/contracts'
 import {
-  CATEGORIES_BY_TYPE, DESCRIPTION_MAX_LENGTH, DomainError, formatMoney, MOVEMENT_TYPE_LABELS, MOVEMENT_TYPES,
-  NOTE_MAX_LENGTH, parseMajorInput, toIsoDate, toMajor, type Movement, type MovementType,
+  CATEGORY_NAME_MAX_LENGTH, DESCRIPTION_MAX_LENGTH, formatMoney, MOVEMENT_TYPE_LABELS, MOVEMENT_TYPES,
+  NOTE_MAX_LENGTH, parseMajorInput, toIsoDate, toMajor, type MovementType,
 } from '@kaligula/domain'
-import { useState, type FormEvent } from 'react'
+import { Check, Plus, X } from 'lucide-react'
+import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
-import { useFinanceStore } from '@/features/finance/finance-store'
 import { useUiStore } from '@/features/ui/ui-store'
+import { ApiError, errorMessage } from '@/lib/api-client'
 import { cn } from '@/lib/cn'
 import { TYPE_STYLE } from '@/lib/navigation'
+import { useCategoriesOf, useCreateCategory, useSaveMovement } from '../queries'
 
-type Errors = Partial<Record<'type' | 'description' | 'amount' | 'occurredOn' | 'note' | 'form', string>>
+type Field = 'type' | 'description' | 'amount' | 'occurredOn' | 'categoryId' | 'note' | 'form'
+type Errors = Partial<Record<Field, string>>
 
+const NEW_CATEGORY = '__new__'
 const amountInputFormat = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2, useGrouping: true })
+const ALL_TYPES = [...MOVEMENT_TYPES]
 
-function MovementForm({ type: initialType, movement, onDone }: { type: MovementType; movement?: Movement; onDone: () => void }) {
-  const addMovement = useFinanceStore((state) => state.addMovement)
-  const updateMovement = useFinanceStore((state) => state.updateMovement)
+/** Maps a server field name to the form field that shows the message. */
+function formField(field: string | undefined): Field {
+  if (field === 'amount' || field === 'amountMinor') return 'amount'
+  if (field === 'description' || field === 'occurredOn' || field === 'categoryId' || field === 'note' || field === 'type') return field
+  return 'form'
+}
+
+function MovementForm({ type: initialType, movement, onDone }: { type: MovementType; movement?: MovementDto; onDone: () => void }) {
+  const saveMovement = useSaveMovement()
+  const createCategory = useCreateCategory()
   const notify = useUiStore((state) => state.notify)
+  const categories = useCategoriesOf(ALL_TYPES)
 
   const [type, setType] = useState<MovementType>(movement?.type ?? initialType)
   const [description, setDescription] = useState(movement?.description ?? '')
   const [amount, setAmount] = useState(movement ? amountInputFormat.format(toMajor(movement.amountMinor)) : '')
   const [occurredOn, setOccurredOn] = useState(movement?.occurredOn ?? toIsoDate(new Date()))
-  const [category, setCategory] = useState(movement?.category ?? CATEGORIES_BY_TYPE[initialType][0])
+  const [chosenCategory, setChosenCategory] = useState<string | null>(movement?.categoryId ?? null)
   const [note, setNote] = useState(movement?.note ?? '')
+  const [newCategory, setNewCategory] = useState<string | null>(null)
   const [errors, setErrors] = useState<Errors>({})
 
-  const categories = CATEGORIES_BY_TYPE[type]
-  const categoryOptions = categories.includes(category) ? categories : [category, ...categories]
+  const options = categories.items.filter((category) => category.type === type)
+  // Default to the first custom category of the type; "Otro" (system) is listed last.
+  const categoryId = options.some((category) => category.id === chosenCategory) ? chosenCategory! : (options[0]?.id ?? '')
   const parsedAmount = parseMajorInput(amount)
 
-  const changeType = (next: MovementType) => {
-    setType(next)
-    if (!CATEGORIES_BY_TYPE[next].includes(category)) setCategory(CATEGORIES_BY_TYPE[next][0])
-  }
-
   /** Clears a field's error as soon as the user edits it. */
-  const edit = <T,>(field: keyof Errors, setter: (value: T) => void) => (value: T) => {
+  const edit = <T,>(field: Field, setter: (value: T) => void) => (value: T) => {
     setter(value)
     setErrors((current) => (current[field] || current.form ? { ...current, [field]: undefined, form: undefined } : current))
   }
@@ -50,25 +61,55 @@ function MovementForm({ type: initialType, movement, onDone }: { type: MovementT
     requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
   }
 
+  const addCategory = () => {
+    const name = newCategory?.trim()
+    if (!name) return
+    createCategory.mutate({ type, name }, {
+      onSuccess: (category) => {
+        setChosenCategory(category.id)
+        setNewCategory(null)
+        setErrors((current) => ({ ...current, categoryId: undefined }))
+        notify(`Categoría «${category.name}» creada`, 'success')
+      },
+      onError: (error) => setErrors((current) => ({ ...current, categoryId: errorMessage(error) })),
+    })
+  }
+
+  const onNewCategoryKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      addCategory()
+    }
+    if (event.key === 'Escape') {
+      event.stopPropagation()
+      event.preventDefault()
+      setNewCategory(null)
+    }
+  }
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
-    // Report every empty required field at once; the domain still validates the full draft below.
+    // Report every empty required field at once; the server validates the full record again.
     const missing: Errors = {}
     if (!description.trim()) missing.description = 'Escribe una descripción.'
     if (parsedAmount === null) missing.amount = 'Escribe un valor numérico, por ejemplo 12.500.'
+    if (!categoryId) missing.categoryId = 'Selecciona una categoría.'
     if (parsedAmount === null || Object.keys(missing).length > 0) return showErrors(form, missing)
 
-    const draft = { type, description, category, amountMinor: parsedAmount, occurredOn, note }
-    try {
-      if (movement) updateMovement(movement.id, draft)
-      else addMovement(draft)
-      notify(movement ? 'Registro actualizado' : `${MOVEMENT_TYPE_LABELS[type]} guardado en este dispositivo`, 'success')
-      onDone()
-    } catch (error) {
-      if (error instanceof DomainError) showErrors(form, { [error.field ?? 'form']: error.message })
-      else setErrors({ form: 'No fue posible guardar el registro.' })
-    }
+    saveMovement.mutate(
+      { id: movement?.id, input: { type, description, categoryId, amountMinor: parsedAmount, occurredOn, note: note.trim() || null } },
+      {
+        onSuccess: () => {
+          notify(movement ? 'Registro actualizado' : `${MOVEMENT_TYPE_LABELS[type]} guardado`, 'success')
+          onDone()
+        },
+        onError: (error) => {
+          if (error instanceof ApiError && error.status === 400) showErrors(form, { [formField(error.field)]: error.message })
+          else setErrors({ form: errorMessage(error, 'No fue posible guardar el registro.') })
+        },
+      },
+    )
   }
 
   return (
@@ -80,7 +121,7 @@ function MovementForm({ type: initialType, movement, onDone }: { type: MovementT
             const Icon = TYPE_STYLE[value].icon
             return (
               <label key={value} className="relative">
-                <input type="radio" name="type" value={value} checked={type === value} onChange={() => changeType(value)} className="peer sr-only" />
+                <input type="radio" name="type" value={value} checked={type === value} onChange={() => edit<MovementType>('type', setType)(value)} className="peer sr-only" />
                 <span
                   className={cn(
                     'flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-ink-2 transition-colors',
@@ -131,9 +172,45 @@ function MovementForm({ type: initialType, movement, onDone }: { type: MovementT
         />
       </div>
 
-      <SelectField label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)}>
-        {categoryOptions.map((option) => <option key={option}>{option}</option>)}
-      </SelectField>
+      {newCategory === null ? (
+        <SelectField
+          label="Categoría"
+          value={categoryId}
+          disabled={categories.isPending}
+          error={errors.categoryId}
+          onChange={(event) => {
+            if (event.target.value === NEW_CATEGORY) setNewCategory('')
+            else edit('categoryId', setChosenCategory)(event.target.value)
+          }}
+        >
+          {categories.isPending && <option value="">Cargando…</option>}
+          {options.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          <option value={NEW_CATEGORY}>＋ Nueva categoría…</option>
+        </SelectField>
+      ) : (
+        <div className="grid gap-1.5">
+          <TextField
+            label={`Nueva categoría de ${MOVEMENT_TYPE_LABELS[type].toLowerCase()}`}
+            value={newCategory}
+            onChange={(event) => setNewCategory(event.target.value)}
+            onKeyDown={onNewCategoryKey}
+            maxLength={CATEGORY_NAME_MAX_LENGTH}
+            placeholder="Ej. Mascotas"
+            autoFocus
+            error={errors.categoryId}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={addCategory} disabled={!newCategory.trim() || createCategory.isPending}>
+              <Check size={15} aria-hidden />
+              {createCategory.isPending ? 'Creando…' : 'Crear categoría'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setNewCategory(null)}>
+              <X size={15} aria-hidden />
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <TextAreaField
         label="Nota (opcional)"
@@ -146,8 +223,10 @@ function MovementForm({ type: initialType, movement, onDone }: { type: MovementT
 
       {errors.form && <p role="alert" className="text-[13px] font-medium text-negative">{errors.form}</p>}
 
-      <Button type="submit" size="lg" className="mt-1 w-full">{movement ? 'Guardar cambios' : 'Guardar registro'}</Button>
-      <p className="text-center text-[12px] text-muted">Los registros se guardan en este dispositivo. Usa el respaldo CSV para copiarlos.</p>
+      <Button type="submit" size="lg" className="mt-1 w-full" disabled={saveMovement.isPending || newCategory !== null}>
+        {movement ? <Check size={18} aria-hidden /> : <Plus size={18} aria-hidden />}
+        {saveMovement.isPending ? 'Guardando…' : movement ? 'Guardar cambios' : 'Guardar registro'}
+      </Button>
     </form>
   )
 }
@@ -155,13 +234,12 @@ function MovementForm({ type: initialType, movement, onDone }: { type: MovementT
 export function MovementDialog() {
   const dialog = useUiStore((state) => state.dialog)
   const closeDialog = useUiStore((state) => state.closeDialog)
-  const movements = useFinanceStore((state) => state.movements)
   const open = dialog?.kind === 'movement'
-  const movement = open && dialog.movementId ? movements.find((item) => item.id === dialog.movementId) : undefined
+  const movement = open ? dialog.movement : undefined
 
   return (
     <Dialog open={open} onClose={closeDialog} eyebrow={movement ? 'Editar registro' : 'Nuevo registro'} title={movement ? movement.description : 'Añadir movimiento'}>
-      {open && <MovementForm key={dialog.movementId ?? dialog.type} type={dialog.type} movement={movement} onDone={closeDialog} />}
+      {open && <MovementForm key={movement?.id ?? dialog.type} type={dialog.type} movement={movement} onDone={closeDialog} />}
     </Dialog>
   )
 }
