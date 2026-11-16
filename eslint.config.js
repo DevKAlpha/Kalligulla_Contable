@@ -1,23 +1,31 @@
 import js from '@eslint/js'
-import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
-export default [
-  { ignores: ['dist', 'release'] },
+export default tseslint.config(
+  { ignores: ['**/node_modules', '**/.next', '**/dist', '**/release', 'apps/desktop/web-dist', '**/next-env.d.ts', 'scripts/**/*.cjs', 'apps/web/public/sw.js'] },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ['**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      globals: { ...globals.browser, ...globals.node },
-      parserOptions: { ecmaVersion: 'latest', ecmaFeatures: { jsx: true }, sourceType: 'module' },
-    },
-    plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    plugins: { 'react-hooks': reactHooks },
     rules: {
-      ...js.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' }],
     },
   },
-]
+  {
+    // Domain rules stay runtime-agnostic (Node, Bun or the browser): no Node built-ins, no framework imports.
+    files: ['packages/domain/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: ['node:*', 'react', 'next', 'next/*', 'hono', 'zod'] }],
+    },
+  },
+  {
+    files: ['apps/desktop/**/*.{cjs,mjs}'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+)

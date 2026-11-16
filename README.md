@@ -1,185 +1,140 @@
 # Kaligula
 
-Kaligula es una aplicación de finanzas personales con estética de consola portátil retro. Permite visualizar ingresos, gastos, inversiones, préstamos y metas desde una interfaz responsive que funciona como aplicación web o programa de escritorio.
+Kaligula es una consola financiera personal. Sirve para registrar ingresos, gastos, inversiones, préstamos y una meta de ahorro. Su interfaz imita una consola de bolsillo propia, la **K-1**, y se usa como web instalable (PWA) o como programa de escritorio (Electron).
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| Web | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
+| Estado del cliente | Zustand (persistido en `localStorage`) |
+| API | Hono, montada en Next.js en `/api`; también puede correr sola en Node |
+| Validación de contratos | Zod |
+| Escritorio | Electron, que ejecuta el servidor standalone de Next.js en local |
+| Calidad | ESLint, `tsc` estricto, Vitest |
+| Despliegue | Docker con imagen multi-stage `node:22-alpine` |
+
+Requisitos: **Node.js 22.12 o superior** (ver `.nvmrc`) y npm 10 o superior. Docker Desktop solo hace falta para la versión contenedorizada.
 
 ## Arquitectura
 
-El frontend está organizado con una adaptación de **Modelo–Vista–Controlador para React**:
-
-```text
-src/
-├── models/
-│   └── financeModel.js             # Datos, validaciones, formato y almacenamiento
-├── controllers/
-│   └── useFinanceController.js     # Estado, navegación y acciones de la aplicación
-├── views/
-│   ├── components/                 # Componentes visuales reutilizables
-│   ├── pages/                      # Vistas completas de cada módulo
-│   └── AppView.jsx                 # Composición principal de la interfaz
-├── App.jsx                         # Conecta controlador y vista
-└── main.jsx                        # Punto de entrada de React
-```
-
-React representa la vista; el hook `useFinanceController` funciona como controlador; y `financeModel.js` concentra la estructura de datos y las reglas independientes de la interfaz.
-
-## Funciones actuales
-
-- Panel de saldo, ingresos y gastos.
-- Gráfico comparativo de flujo mensual.
-- Meta de ahorro y movimientos recientes.
-- Estado inicial completamente vacío, sin valores ni movimientos de demostración.
-- Registro y eliminación de ingresos, gastos, inversiones y préstamos.
-- Recalculo automático de saldo, totales, categorías y gráfica mensual.
-- Configuración y eliminación de la meta de ahorro.
-- Persistencia local de todos los registros en el dispositivo.
-- Navegación responsive para escritorio, tableta y móvil.
-- Interfaz móvil inspirada en una Game Boy vertical simplificada.
-- Navegación accesible mediante teclado y controles táctiles.
-- Respaldo y restauración de saldo, meta y movimientos en un archivo CSV.
-- Aplicación web instalable (PWA), con iconos propios y caché para uso sin conexión.
-- Aplicación de escritorio aislada con Electron.
-- Imagen Docker optimizada mediante compilación en dos etapas y Nginx.
-
-> Los datos se guardan localmente en cada navegador o instalación. Todavía no existe sincronización entre dispositivos ni base de datos central.
-
-## Almacenamiento y respaldos
-
-Actualmente Kaligula guarda la información en el dispositivo. Para crear una copia:
-
-1. Abre el botón **CSV** en la barra superior.
-2. Selecciona **Descargar respaldo**.
-3. Conserva el archivo `kaligula-backup-FECHA.csv` en otra carpeta o servicio de respaldo.
-
-Para recuperar los datos, abre el mismo menú y selecciona **Restaurar CSV**. La restauración reemplaza la información local existente, por lo que se recomienda exportar primero una copia.
-
-El CSV incluye el saldo, los totales, la meta activa, ingresos, gastos, inversiones y préstamos. También permite trasladar manualmente la información de un dispositivo a otro.
-
-## Sincronización futura opcional
-
-El almacenamiento local actual sirve para el prototipo, pero no debe convertirse en la fuente definitiva de información financiera. La evolución recomendada es **local-first con sincronización**:
-
-1. Una API central recibe y valida usuarios, movimientos, categorías, inversiones y préstamos.
-2. PostgreSQL conserva la información definitiva y permite acceder a la misma cuenta desde móvil, navegador y escritorio.
-3. IndexedDB mantiene una copia local en la versión web para continuar trabajando temporalmente sin conexión.
-4. La aplicación de escritorio puede utilizar la misma API y una caché local.
-5. Una cola de sincronización envía al servidor los cambios pendientes cuando vuelve la conexión.
-
-Esta fase no es necesaria para usar la aplicación actual. Si posteriormente se desea sincronización automática, la base de datos puede ejecutarse localmente mediante Docker durante el desarrollo y alojarse en un servidor para producción. El cliente nunca debe conectarse directamente a PostgreSQL: todas las operaciones deben pasar por la API, la autenticación y las validaciones.
-
-## Requisitos de desarrollo
-
-- Node.js 22 o superior.
-- npm 10 o superior.
-- Docker Desktop, solo si se utilizará la versión contenedorizada.
-
-## Desarrollo local
-
-```bash
-npm install
-npm run dev
-```
-
-Vite mostrará la dirección local, normalmente `http://localhost:5173`.
-
-## Compilación web optimizada
-
-```bash
-npm run build
-```
-
-La versión final se genera en `dist/`. Puede servirse desde Apache, Nginx o cualquier hosting de archivos estáticos. Para XAMPP se recomienda apuntar el sitio a `dist/` después de compilar.
-
-## Aplicación de escritorio
-
-Para abrir Kaligula como programa durante el desarrollo:
-
-```bash
-npm run electron:dev
-```
-
-Para crear el ejecutable portátil de Windows:
-
-```bash
-npm run desktop:win
-```
-
-El archivo se genera en `release/Kaligula-0.2.0-Portable.exe`. Es portátil: puede abrirse sin instalar la aplicación.
-
-También existe el comando general:
-
-```bash
-npm run desktop:build
-```
-
-Este genera el formato correspondiente al sistema configurado. Por restricciones de cada plataforma, los paquetes para macOS y Linux deben compilarse normalmente desde esos sistemas:
-
-- Windows: `.exe` portátil.
-- Linux: `.AppImage`.
-- macOS: `.dmg`.
-
-## Docker
-
-Crear e iniciar el contenedor:
-
-```bash
-docker compose up --build -d
-```
-
-Abrir la aplicación en:
-
-```text
-http://localhost:8080
-```
-
-Detenerla:
-
-```bash
-docker compose down
-```
-
-Para acceder desde otro dispositivo conectado a la misma red, abre `http://IP-DE-LA-MAQUINA:8080` y permite el puerto 8080 en el firewall. Docker sirve la versión web; el ejecutable Electron está pensado para equipos de escritorio.
-
-## Instalar en el celular
-
-Kaligula incluye un manifiesto, iconos y funcionamiento offline como PWA. Cuando se aloja mediante HTTPS:
-
-1. Abre la dirección de Kaligula en Chrome o Edge.
-2. Abre el menú del navegador.
-3. Selecciona **Instalar aplicación** o **Agregar a pantalla principal**.
-4. El icono de Kaligula aparecerá entre las aplicaciones del dispositivo.
-
-Cuando se usa `http://IP-DE-LA-MAQUINA:8080`, la aplicación solo está disponible mientras el computador y Docker permanezcan encendidos y ambos dispositivos estén en la misma red. Para acceder desde cualquier lugar y obtener instalación PWA completa, publica la carpeta `dist/` en un alojamiento HTTPS. Esto no requiere una base de datos, pero cada dispositivo conserva sus propios datos; el CSV permite transferirlos manualmente.
-
-## Estructura general
+El proyecto es un monorepo con npm workspaces, organizado como un **monolito modular hexagonal**. Cada módulo de la API recibe sus dependencias por inyección, por lo que puede extraerse más adelante a un microservicio sin reescribirse.
 
 ```text
 KALIGULLA/
-├── docker/                 # Configuración de Nginx
-├── electron/               # Proceso de escritorio seguro
-├── src/                    # Arquitectura MVC y componentes React
-├── View/css/               # Sistema visual responsive
-├── Dockerfile
-├── docker-compose.yml
-├── package.json
-├── vite.config.js
-└── index.html
+├── apps/
+│   ├── web/            Next.js: interfaz, rutas y montaje de la API en /api
+│   │   └── src/
+│   │       ├── app/                 Rutas: /, /gastos, /inversiones, /prestamos, /api/*
+│   │       ├── components/console/  Carcasa K-1: rieles, teclas, bisel, deck móvil
+│   │       ├── components/ui/       Sistema de diseño: Button, Panel, Dialog, Field, Toast
+│   │       ├── features/finance/    Store, hooks, componentes y vistas financieras
+│   │       ├── features/market/     TRM en vivo
+│   │       ├── features/theme/      Tema claro / oscuro / sistema
+│   │       └── features/ui/         Estado de diálogos y avisos
+│   └── desktop/        Electron: arranca el servidor standalone y abre la ventana
+├── packages/
+│   ├── domain/         Reglas puras sin I/O: dinero, movimientos, analítica, metas, CSV, migración
+│   ├── contracts/      Esquemas Zod compartidos entre la API y los clientes
+│   └── api/            Hono con módulos hexagonales (health, market-data)
+│       └── src/modules/market-data/{domain,application,infrastructure,http}
+├── scripts/            Generador de íconos
+├── Dockerfile, docker-compose.yml, docker-compose.dev.yml
+└── vitest.config.ts, eslint.config.js, tsconfig.base.json
 ```
 
-## Comandos disponibles
+Reglas que mantienen el código portable a Bun:
+- `packages/domain` no puede importar módulos de Node ni frameworks. Una regla de ESLint lo verifica.
+- La API usa solo APIs web estándar (`fetch`, `Request`/`Response`, `AbortSignal`, Web Crypto).
+- Cada app tiene un único punto de arranque. Hoy es `packages/api/src/main.node.ts`; un futuro `main.bun.ts` exportaría `{ fetch: app.fetch }`.
+
+## Funciones
+
+- **Panel de inicio:**
+  - saldo disponible, junto con los ingresos, gastos y ahorro del mes;
+  - variación del ahorro frente al mes anterior.
+- **Gráfica de flujo de 6 meses** con tooltips, navegable con teclado y con una tabla accesible para lectores de pantalla.
+- **Gastos por categoría** del mes en curso.
+- **Registros:**
+  - alta y edición con fecha real, categorías según el tipo y una nota opcional;
+  - al eliminar aparece la opción **Deshacer**.
+- **Módulos de Gastos, Inversiones y Préstamos** con historial agrupado por mes, búsqueda y filtros.
+- **Meta de ahorro** con barra de progreso.
+- **Perfil editable:** el nombre ya no está fijo en el código.
+- **TRM oficial en vivo** en el bisel de la consola. La consulta `/api/market/trm` va a datos.gov.co, guarda caché 30 minutos y, si la fuente falla, sirve el último valor conocido.
+- **Tema claro, oscuro o del sistema**, sin parpadeo al cargar la página.
+- **Respaldo CSV:**
+  - exporta e importa los datos, protegiéndolos contra inyección de fórmulas;
+  - antes de reemplazar los datos pide confirmación;
+  - acepta los respaldos de la versión anterior.
+- **Totales siempre derivados** de los movimientos: ya no se guardan aparte, así que no pueden desincronizarse.
+- **Montos en unidades mínimas** (enteros), con el campo `currency` listo para manejar varias monedas.
+
+### Datos de la versión anterior
+
+La primera vez que se abre la nueva versión, se migran automáticamente los datos guardados en `localStorage` bajo `kaligula.finance.v2`. La clave antigua se conserva como copia de seguridad.
+
+> El ejecutable de escritorio cambia de origen (antes `file://`, ahora `http://127.0.0.1:47821`), así que no ve los datos de la versión 0.2. Para trasladarlos, exporta el CSV en la versión anterior e impórtalo en la nueva.
+
+## Diseño responsive
+
+| Ancho | Presentación |
+|---|---|
+| < 768 px (móvil) | Consola vertical: pantalla arriba; deck inferior con las 4 teclas de módulo y la tecla «+» central. Las tarjetas se muestran como filas compactas. |
+| 768–1023 px (tableta) | La misma consola, centrada y más ancha; el resumen se muestra en 3 columnas. |
+| ≥ 1024 px (escritorio) | Consola horizontal con riel izquierdo (módulos), pantalla central y riel derecho (Nuevo, Meta, Respaldo, Tema). |
+
+Los tokens de color se definen en `apps/web/src/app/globals.css`, en las variables `:root` y `[data-theme="dark"]`. La paleta de la gráfica (violeta para ingresos, naranja para gastos) está validada para daltonismo en ambos temas.
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev            # http://localhost:3000
+```
 
 | Comando | Uso |
 |---|---|
-| `npm run dev` | Servidor de desarrollo web |
-| `npm run build` | Compilación web optimizada |
-| `npm run check` | Revisión de calidad del código |
-| `npm run electron:dev` | Aplicación de escritorio en desarrollo |
-| `npm run desktop:win` | Ejecutable portátil para Windows |
-| `npm run desktop:build` | Paquete de escritorio para el sistema actual |
+| `npm run dev` | Servidor de desarrollo de Next.js |
+| `npm run build` | Compilación de producción (standalone) |
+| `npm run start` | Sirve la compilación de producción |
+| `npm run api:dev` | API sola en `http://127.0.0.1:4000/api` |
+| `npm run test` | Pruebas con Vitest (dominio, API, store) |
+| `npm run typecheck` | `tsc` estricto en todos los workspaces |
+| `npm run lint` | ESLint |
+| `npm run check` | lint + typecheck + test |
+| `npm run desktop:dev` | Next.js + Electron en desarrollo |
+| `npm run desktop:win` | Ejecutable portátil para Windows en `release/` |
+| `npm run icons` | Regenera los íconos de `apps/web/public/` |
+
+## Docker
+
+```bash
+docker compose up --build -d                     # producción: http://localhost:8080
+docker compose -f docker-compose.dev.yml up      # desarrollo con recarga: http://localhost:3000
+docker compose down
+```
+
+La imagen de producción tiene estas características:
+- corre como un usuario sin privilegios y con el sistema de archivos en solo lectura;
+- incluye un healthcheck sobre `/api/health`;
+- para pasar a Bun basta con cambiar la imagen base y el comando de arranque.
+
+## API
+
+| Método | Ruta | Respuesta |
+|---|---|---|
+| GET | `/api/health` | `{ status, service, version, time }` |
+| GET | `/api/market/trm` | TRM oficial (`rate`, `validFrom`, `validTo`, `source`, `stale`), o `503` si no está disponible |
 
 ## Próximas fases
 
-1. Agregar una base de datos y cuentas de usuario.
-2. Sincronizar información entre dispositivos.
-3. Implementar edición de registros existentes.
-4. Añadir cálculos de rendimiento, intereses y cuotas.
-5. Incorporar reportes mensuales y categorías personalizables.
+Están definidas en el plan de la Etapa 1:
+1. Cuentas de usuario, PostgreSQL y sincronización entre dispositivos.
+2. Detección de gastos hormiga y gastos recurrentes.
+3. Presupuestos y varias metas.
+4. Varias monedas usando la TRM de la fecha de cada movimiento.
+5. Importación de extractos bancarios.
+6. Portafolio con precios en vivo.
+7. Consejos (insights) basados en reglas.
+8. Noticias relacionadas con las divisas y el portafolio.

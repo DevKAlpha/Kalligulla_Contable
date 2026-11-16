@@ -1,0 +1,24 @@
+// electron-builder never copies folders named `node_modules` through extraResources.
+// prepare-web hides them under another name and the afterPack hook restores them inside the packaged app.
+const fs = require('node:fs')
+const path = require('node:path')
+
+const HIDDEN = '__node_modules__'
+
+/** Renames every `from` directory below `root` to `to`, deepest first. */
+function renameAll(root, from, to) {
+  if (!fs.existsSync(root)) return 0
+  let count = 0
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const full = path.join(root, entry.name)
+    count += renameAll(full, from, to)
+    if (entry.name === from) {
+      fs.renameSync(full, path.join(root, to))
+      count += 1
+    }
+  }
+  return count
+}
+
+module.exports = { HIDDEN, renameAll }

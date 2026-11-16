@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* Dark mode follows data-theme on <html>, set before paint by the inline theme script. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- Design tokens: Kaligula K-1 ---------- */
+:root {
+  color-scheme: light;
+  --backdrop: #e6e2d6;
+  --backdrop-dot: rgb(21 22 28 / 0.12);
+  --shell: #f2eee3;
+  --shell-hi: #fbf8f0;
+  --shell-lo: #d9d3c3;
+  --outline: #15161c;
+  --bezel: #1b1d24;
+  --bezel-text: #a9adb8;
+  --screen: #fbfaf6;
+  --surface: #ffffff;
+  --surface-2: #f4f2ec;
+  --line: #e3e0d7;
+  --line-strong: #cfcbc0;
+  --text: #15161c;
+  --text-2: #464953;
+  --muted: #676b76;
+  --accent: #c6f05a;
+  --accent-strong: #a9d63a;
+  --on-accent: #15161c;
+  --income: #6b5ce7;
+  --expense: #e8743b;
+  --invest: #1a9bb0;
+  --loan: #e0456a;
+  --income-soft: #ece9fd;
+  --expense-soft: #fdebe1;
+  --invest-soft: #dff3f6;
+  --loan-soft: #fde4ea;
+  --positive: #1f7a4a;
+  --negative: #b8432a;
+  --focus: #6b5ce7;
+  --key-shadow: 0 4px 0 var(--outline);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --backdrop: #0c0d11;
+  --backdrop-dot: rgb(255 255 255 / 0.06);
+  --shell: #252731;
+  --shell-hi: #2f323d;
+  --shell-lo: #1a1c23;
+  --outline: #050608;
+  --bezel: #0a0b0e;
+  --bezel-text: #8d93a0;
+  --screen: #111318;
+  --surface: #181b22;
+  --surface-2: #1f232b;
+  --line: #2a2e38;
+  --line-strong: #3a3f4b;
+  --text: #eceef2;
+  --text-2: #c0c4cd;
+  --muted: #9aa0ad;
+  --accent: #c6f05a;
+  --accent-strong: #b5e04a;
+  --on-accent: #15161c;
+  --income: #7a6cf0;
+  --expense: #d96a2e;
+  --invest: #2bb3c8;
+  --loan: #ef5d80;
+  --income-soft: #25224a;
+  --expense-soft: #3a2518;
+  --invest-soft: #12333a;
+  --loan-soft: #3d1c26;
+  --positive: #5fd394;
+  --negative: #ff8a6b;
+  --focus: #b3a9ff;
+}
+
+@theme inline {
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --color-backdrop: var(--backdrop);
+  --color-shell: var(--shell);
+  --color-shell-hi: var(--shell-hi);
+  --color-shell-lo: var(--shell-lo);
+  --color-outline: var(--outline);
+  --color-bezel: var(--bezel);
+  --color-bezel-text: var(--bezel-text);
+  --color-screen: var(--screen);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-invest: var(--invest);
+  --color-loan: var(--loan);
+  --color-income-soft: var(--income-soft);
+  --color-expense-soft: var(--expense-soft);
+  --color-invest-soft: var(--invest-soft);
+  --color-loan-soft: var(--loan-soft);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-focus: var(--focus);
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--backdrop);
+    background-image: radial-gradient(var(--backdrop-dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  dialog::backdrop {
+    background: rgb(12 13 17 / 0.62);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@layer components {
+  /* Subtle LCD scanlines over the screen; decorative only. */
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 30;
+    opacity: 0.035;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, currentColor 3px 4px);
+  }
+
+  /* Speaker grille: a dotted field drawn with gradients. */
+  .grille {
+    background-image: radial-gradient(var(--outline) 1.6px, transparent 1.9px);
+    background-size: 9px 9px;
+    opacity: 0.55;
+  }
+
+  .scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+    overscroll-behavior: contain;
+  }
+
+  .pixel-progress {
+    background-image: repeating-linear-gradient(90deg, currentColor 0 10px, transparent 10px 12px);
+  }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes view-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

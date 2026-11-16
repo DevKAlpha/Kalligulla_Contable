@@ -1,0 +1,10 @@
+{
+  "name": "@kaligula/contracts",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Esquemas Zod y tipos compartidos entre la API y los clientes.",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": { "zod": "4.6.7" }
+}

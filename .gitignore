@@ -1,6 +1,12 @@
 node_modules/
+.next/
 dist/
 release/
-.vite/
+apps/desktop/web-dist/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.*
+!.env.example
 *.log
 .DS_Store

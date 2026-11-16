@@ -1,0 +1,20 @@
+{
+  "name": "@kaligula/api",
+  "version": "0.3.0",
+  "private": true,
+  "description": "API HTTP (Hono) organizada en módulos hexagonales. Se monta en Next.js o corre sola en Node/Bun.",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "dev": "tsx watch src/main.node.ts",
+    "start": "tsx src/main.node.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "@kaligula/contracts": "0.3.0",
+    "hono": "4.13.14",
+    "zod": "4.6.7"
+  },
+  "devDependencies": { "tsx": "4.23.15" }
+}

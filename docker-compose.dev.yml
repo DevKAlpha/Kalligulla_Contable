@@ -1,0 +1,19 @@
+# Development with hot reload: docker compose -f docker-compose.dev.yml up  ->  http://localhost:3000
+services:
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --hostname 0.0.0.0"
+    environment:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - next_cache:/app/apps/web/.next
+volumes:
+  node_modules:
+  next_cache:

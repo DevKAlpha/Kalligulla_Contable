@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const zlib = require('node:zlib')
 
-const outputDir = path.join(__dirname, '..', 'public')
+const outputDir = path.join(__dirname, '..', 'apps', 'web', 'public')
 fs.mkdirSync(outputDir, { recursive: true })
 
 function crc32(buffer) {
@@ -28,7 +28,7 @@ function pngChunk(name, data) {
 function createIcon(size) {
   const pixels = Buffer.alloc((size * 4 + 1) * size)
   const palette = {
-    ink: [24, 26, 33, 255], lime: [201, 239, 92, 255], pink: [255, 82, 111, 255], cyan: [48, 197, 215, 255],
+    ink: [21, 22, 28, 255], shell: [242, 238, 227, 255], lime: [198, 240, 90, 255],
   }
   const setPixel = (x, y, color) => {
     const index = y * (size * 4 + 1) + 1 + x * 4
@@ -38,10 +38,11 @@ function createIcon(size) {
     for (let y = y1; y < y2; y += 1) for (let x = x1; x < x2; x += 1) setPixel(x, y, color)
   }
 
-  fill(0, 0, size, size, palette.ink)
-  fill(0, 0, Math.ceil(size * 0.09), size, palette.pink)
-  fill(Math.floor(size * 0.91), 0, size, size, palette.cyan)
-  const inset = Math.floor(size * 0.19)
+  // Device shell, dark bezel and a lime screen holding a pixel K.
+  fill(0, 0, size, size, palette.shell)
+  const bezel = Math.floor(size * 0.1)
+  fill(bezel, bezel, size - bezel, size - bezel, palette.ink)
+  const inset = Math.floor(size * 0.17)
   fill(inset, inset, size - inset, size - inset, palette.lime)
 
   const letter = ['10001', '10010', '10100', '11000', '10100', '10010', '10001']
@@ -87,4 +88,4 @@ icoEntry.writeUInt32LE(icon256.length, 8)
 icoEntry.writeUInt32LE(22, 12)
 fs.writeFileSync(path.join(outputDir, 'kaligula.ico'), Buffer.concat([icoHeader, icoEntry, icon256]))
 
-console.log('Kaligula icons generated in public/')
+console.log('Kaligula icons generated in apps/web/public/')

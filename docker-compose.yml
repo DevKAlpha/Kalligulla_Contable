@@ -1,9 +1,16 @@
+# Production-like run: docker compose up --build -d  ->  http://localhost:8080
 services:
-  kaligula:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kaligula-finance
+    container_name: kaligula-web
     ports:
-      - "8080:80"
+      - "8080:3000"
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/apps/web/.next/cache
+    security_opt:
+      - no-new-privileges:true

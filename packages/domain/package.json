@@ -1,0 +1,9 @@
+{
+  "name": "@kaligula/domain",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Reglas de negocio puras (sin I/O): movimientos, dinero, metas, analítica y respaldos.",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" }
+}

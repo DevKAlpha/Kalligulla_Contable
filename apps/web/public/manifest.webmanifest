@@ -1,0 +1,16 @@
+{
+  "name": "Kaligula — Finanzas personales",
+  "short_name": "Kaligula",
+  "description": "Consola financiera personal para controlar ingresos, gastos, inversiones y préstamos.",
+  "lang": "es-CO",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e6e2d6",
+  "theme_color": "#15161c",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
