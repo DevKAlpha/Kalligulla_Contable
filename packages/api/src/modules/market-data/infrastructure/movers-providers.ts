@@ -26,6 +26,7 @@ const sparkResponse = z.object({
       response: z.array(z.object({
         meta: z.object({
           regularMarketPrice: z.number().optional(),
+          regularMarketTime: z.number().optional(),
           longName: z.string().optional(),
           shortName: z.string().optional(),
           currency: z.string().optional(),
@@ -40,9 +41,13 @@ const sparkResponse = z.object({
 /** Yahoo's batch endpoint accepts at most 20 symbols per call. */
 const YAHOO_BATCH = 20
 
+/** Yahoo writes share classes with a dash (`BRK-B`); Kaligula uses the exchange form (`BRK.B`). */
+const toYahoo = (symbol: string) => symbol.replace('.', '-')
+
 /**
  * Daily closes from Yahoo Finance's public chart data. It is not an official API:
  * it may change or throttle without notice, so it sits behind a port and the result is cached.
+ * Used only when no official provider (Alpaca) is configured.
  */
 export function createYahooPriceHistoryProvider(options: HttpOptions & { endpoint?: string } = {}): PriceHistoryProvider {
   const fetchImpl = options.fetch ?? globalThis.fetch
@@ -50,14 +55,22 @@ export function createYahooPriceHistoryProvider(options: HttpOptions & { endpoin
   const timeoutMs = options.timeoutMs ?? 10_000
 
   return {
-    source: { name: 'Yahoo Finance', url: 'https://finance.yahoo.com', official: false },
+    source: {
+      name: 'Yahoo Finance',
+      url: 'https://finance.yahoo.com',
+      official: false,
+      realtime: false,
+      note: 'Fuente pública no oficial; puede tener retraso.',
+    },
+    refreshMs: 15 * 60_000,
     async history(symbols) {
+      const canonical = new Map(symbols.map((symbol) => [toYahoo(symbol), symbol]))
       const found = new Map<string, PriceHistory>()
       let failures = 0
       const batches = Math.ceil(symbols.length / YAHOO_BATCH)
       for (let index = 0; index < symbols.length; index += YAHOO_BATCH) {
         const batch = symbols.slice(index, index + YAHOO_BATCH)
-        const url = `${endpoint}?symbols=${batch.map(encodeURIComponent).join(',')}&range=2mo&interval=1d`
+        const url = `${endpoint}?symbols=${batch.map((symbol) => encodeURIComponent(toYahoo(symbol))).join(',')}&range=2mo&interval=1d`
         try {
           const parsed = sparkResponse.safeParse(await getJson(fetchImpl, url, timeoutMs, { 'user-agent': 'Mozilla/5.0 (compatible; Kaligula)' }))
           if (!parsed.success) throw new UpstreamUnavailableError('Formato de precios inesperado.')
@@ -70,10 +83,12 @@ export function createYahooPriceHistoryProvider(options: HttpOptions & { endpoin
               return close !== null && close !== undefined && close > 0 ? [{ time: time * 1000, close }] : []
             })
             if (points.length < 2) continue
-            found.set(result.symbol, {
-              symbol: result.symbol,
-              name: data.meta.longName ?? data.meta.shortName ?? result.symbol,
+            const symbol = canonical.get(result.symbol) ?? result.symbol
+            found.set(symbol, {
+              symbol,
+              name: data.meta.longName ?? data.meta.shortName,
               price: data.meta.regularMarketPrice && data.meta.regularMarketPrice > 0 ? data.meta.regularMarketPrice : points[points.length - 1].close,
+              priceTime: data.meta.regularMarketTime ? data.meta.regularMarketTime * 1000 : null,
               points,
             })
           }
@@ -119,7 +134,13 @@ export function createCoinGeckoProvider(options: HttpOptions & { apiKey?: string
   const timeoutMs = options.timeoutMs ?? 10_000
 
   return {
-    source: { name: 'CoinGecko', url: 'https://www.coingecko.com', official: true },
+    source: {
+      name: 'CoinGecko',
+      url: 'https://www.coingecko.com',
+      official: true,
+      realtime: false,
+      note: 'Precios agregados de los principales exchanges; se actualizan cada pocos minutos.',
+    },
     async byCategory(category, limit) {
       const url = new URL(endpoint)
       url.search = new URLSearchParams({

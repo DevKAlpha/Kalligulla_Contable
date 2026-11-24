@@ -26,6 +26,9 @@ services:
       DATABASE_URL: postgres://kaligula:${POSTGRES_PASSWORD:-kaligula-local}@db:5432/kaligula
       KALIGULA_ALLOWED_HOSTS: ${KALIGULA_ALLOWED_HOSTS:-}
       AWESOMEAPI_KEY: ${AWESOMEAPI_KEY:-}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      ALPACA_API_KEY_ID: ${ALPACA_API_KEY_ID:-}
+      ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY:-}
     depends_on:
       db:
         condition: service_healthy

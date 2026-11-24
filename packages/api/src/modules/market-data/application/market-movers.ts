@@ -15,11 +15,8 @@ export interface MarketMoversOptions {
   perNiche?: number
 }
 
-const DEFAULT_TTL: Record<AssetClass, number> = {
-  stocks: 15 * 60_000,
-  etfs: 15 * 60_000,
-  crypto: 10 * 60_000,
-}
+/** Crypto rankings are reused for 10 minutes (CoinGecko's public tier is rate limited). Stocks and ETFs follow their provider. */
+const CRYPTO_TTL = 10 * 60_000
 
 /** Coins fetched per CoinGecko category before ranking. */
 const CRYPTO_CANDIDATES = 25
@@ -34,18 +31,19 @@ export function createMarketMovers({ prices, crypto, clock = () => new Date(), t
   const inFlight = new Map<AssetClass, Promise<MoversDto>>()
 
   async function symbolMovers(assetClass: 'stocks' | 'etfs', niches: readonly SymbolNiche[]): Promise<Omit<MoversDto, 'fetchedAt' | 'stale'>> {
-    const symbols = [...new Set(niches.flatMap((niche) => niche.symbols))]
+    const symbols = [...new Set(niches.flatMap((niche) => niche.assets.map((asset) => asset.symbol)))]
     const histories = await prices.history(symbols)
     const ranked = niches.map((niche) => {
-      const movers = niche.symbols.flatMap((symbol): MoverDto[] => {
+      const movers = niche.assets.flatMap(({ symbol, name }): MoverDto[] => {
         const history = histories.get(symbol)
         const performance = history ? periodReturn(history.points, history.price) : null
         if (!history || !performance) return []
         return [{
           symbol,
-          name: history.name,
+          name,
           niche: niche.label,
           priceUsd: history.price,
+          priceTime: history.priceTime ? new Date(history.priceTime).toISOString() : null,
           changePct: performance.changePct,
           change7dPct: null,
           sparkline: [...windowPoints(history.points), history.price],
@@ -67,6 +65,7 @@ export function createMarketMovers({ prices, crypto, clock = () => new Date(), t
         name: asset.name,
         niche: niche.label,
         priceUsd: asset.priceUsd,
+        priceTime: null,
         changePct: asset.change30dPct,
         change7dPct: asset.change7dPct,
         sparkline: [],
@@ -102,7 +101,7 @@ export function createMarketMovers({ prices, crypto, clock = () => new Date(), t
   return {
     get(assetClass: AssetClass): Promise<MoversDto> {
       const cached = cache.get(assetClass)
-      const ttl = ttlMs[assetClass] ?? DEFAULT_TTL[assetClass]
+      const ttl = ttlMs[assetClass] ?? (assetClass === 'crypto' ? CRYPTO_TTL : prices.refreshMs)
       if (cached && clock().getTime() - cached.at < ttl) return Promise.resolve(cached.value)
       let pending = inFlight.get(assetClass)
       if (!pending) {

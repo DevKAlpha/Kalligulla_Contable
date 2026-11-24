@@ -31,19 +31,20 @@ const DAY = 86_400_000
 export function history(symbol: string, start: number, step: number): PriceHistory {
   const end = Date.UTC(2026, 10, 16)
   const points = Array.from({ length: 40 }, (_, index) => ({ time: end - (39 - index) * DAY, close: start + step * index }))
-  return { symbol, name: `${symbol} Inc.`, price: points[39].close, points }
+  return { symbol, name: `${symbol} Inc.`, price: points[39].close, priceTime: end, points }
 }
 
 export function fakePriceHistoryProvider(impl?: (symbols: readonly string[]) => Promise<Map<string, PriceHistory>>): PriceHistoryProvider {
   return {
-    source: { name: 'fake-prices', url: 'https://example.com', official: false },
+    source: { name: 'fake-prices', url: 'https://example.com', official: false, realtime: false, note: 'test' },
+    refreshMs: 15 * 60_000,
     history: vi.fn(impl ?? (async (symbols: readonly string[]) => new Map<string, PriceHistory>(symbols.map((symbol, index) => [symbol, history(symbol, 100, (index % 7) - 3)])))),
   }
 }
 
 export function fakeCryptoProvider(impl?: (category: string) => Promise<CryptoAsset[]>): CryptoMarketProvider {
   return {
-    source: { name: 'fake-crypto', url: 'https://example.com', official: true },
+    source: { name: 'fake-crypto', url: 'https://example.com', official: true, realtime: false, note: 'test' },
     byCategory: vi.fn(impl ?? (async (category) => [
       { symbol: 'BTC', name: 'Bitcoin', priceUsd: 61_000, change30dPct: -24.5, change7dPct: -3 },
       { symbol: `${category.slice(0, 3).toUpperCase()}X`, name: 'Alpha', priceUsd: 2, change30dPct: 12, change7dPct: 4 },

@@ -263,6 +263,8 @@ export const moverSchema = z.object({
   /** Niche the asset belongs to (useful in the highlights list). */
   niche: z.string(),
   priceUsd: z.number().positive(),
+  /** When the price was traded (live sources), otherwise null. */
+  priceTime: isoDateTime.nullable(),
   /** Return over `periodDays`, in percent. */
   changePct: z.number(),
   /** 7-day return, when the source provides it (crypto). */
@@ -281,7 +283,7 @@ export const moversSchema = z.object({
     universe: z.number().int().nonnegative(),
     items: z.array(moverSchema),
   })),
-  source: z.object({ name: z.string(), url: z.url(), official: z.boolean() }),
+  source: z.object({ name: z.string(), url: z.url(), official: z.boolean(), realtime: z.boolean(), note: z.string() }),
   fetchedAt: isoDateTime,
   stale: z.boolean(),
 })

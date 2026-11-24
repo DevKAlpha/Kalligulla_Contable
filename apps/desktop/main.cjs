@@ -1,4 +1,5 @@
 const { app, BrowserWindow, shell, utilityProcess } = require('electron')
+const fs = require('node:fs')
 const path = require('node:path')
 
 const isDevelopment = !app.isPackaged
@@ -11,6 +12,23 @@ const PORT = 47821
 const HOST = '127.0.0.1'
 
 let server = null
+
+/**
+ * Optional settings for the embedded server (for example the free Alpaca keys), read from
+ * `kaligula.env` in the user's profile folder: one KEY=value per line, # for comments.
+ * Secrets stay on the user's machine and never inside the app package.
+ */
+function loadUserEnv() {
+  const file = path.join(app.getPath('userData'), 'kaligula.env')
+  if (!fs.existsSync(file)) return {}
+  const env = {}
+  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    if (line.trim().startsWith('#')) continue
+    const match = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line)
+    if (match) env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, '$2')
+  }
+  return env
+}
 
 async function waitForServer(url, timeoutMs = 45000) {
   const started = Date.now()
@@ -31,6 +49,7 @@ async function startEmbeddedServer() {
   server = utilityProcess.fork(serverPath, [], {
     env: {
       ...process.env,
+      ...loadUserEnv(),
       NODE_ENV: 'production',
       PORT: String(PORT),
       HOSTNAME: HOST,

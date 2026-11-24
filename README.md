@@ -105,15 +105,44 @@ Ranking de los activos con mejor rendimiento en los **últimos 30 días**, por n
 
 | Clase | Nichos | Fuente |
 |---|---|---|
-| Acciones | Tecnología, Salud, Finanzas, Energía, Consumo, Colombia (ADR: Ecopetrol, Bancolombia, Grupo Aval, Tecnoglass) | Yahoo Finance |
-| ETF | Índices, Sectores, Temáticos, Materias primas y bonos, Latinoamérica | Yahoo Finance |
-| Cripto | Capa 1, DeFi, Inteligencia artificial, Memes | CoinGecko |
+| Acciones | Tecnología, Salud, Finanzas, Energía, Consumo, Colombia (ADR: Ecopetrol, Bancolombia, Grupo Aval, Tecnoglass) | Alpaca Markets (oficial, en vivo) |
+| ETF | Índices, Sectores, Temáticos, Materias primas y bonos, Latinoamérica | Alpaca Markets (oficial, en vivo) |
+| Cripto | Capa 1, DeFi, Inteligencia artificial, Memes | CoinGecko (oficial) |
 
-- El ranking se calcula **dentro de una selección curada de activos líderes** por nicho, no sobre todo el mercado. La lista se edita en `packages/domain/src/markets.ts`.
+- El ranking se calcula **dentro de una selección curada de activos líderes** por nicho, no sobre todo el mercado. La lista y los nombres se editan en `packages/domain/src/markets.ts`.
 - En cripto se excluyen las stablecoins y los tokens envueltos o en staking, y solo entran activos con capitalización mayor a US$ 200 M.
-- El servidor guarda cada ranking en caché (15 min para acciones y ETF, 10 min para cripto) y lo actualiza al consultarlo.
-- **Yahoo Finance no tiene una API oficial:** Kaligula usa su endpoint público de gráficos, que puede cambiar o limitar el acceso sin aviso. La fuente está detrás de un puerto (`PriceHistoryProvider`), así que puede reemplazarse por un proveedor con llave (Twelve Data, Polygon, etc.) sin tocar el resto. CoinGecko sí es una API oficial (requiere atribución, que se muestra en pantalla).
+- Con Alpaca, el ranking de acciones y ETF se actualiza **cada minuto**; cripto, cada 10 minutos.
 - Es información educativa: rendimientos pasados no garantizan resultados futuros y no es asesoría de inversión.
+
+#### Precios oficiales en tiempo real con Alpaca (gratis)
+
+Kaligula usa la API de datos de [Alpaca Markets](https://alpaca.markets/data), un bróker regulado de EE. UU. Su plan gratuito *Basic* incluye:
+
+- **Precio en vivo:** la última operación real en la bolsa **IEX**, en tiempo real. IEX es una bolsa oficial de EE. UU. que maneja una parte del volumen total (cerca del 2–3 %). En acciones y ETF líquidos su precio coincide con el del mercado; en papeles con poco volumen (por ejemplo, algunos ADR colombianos) la última operación en IEX puede tener unos minutos. Por eso cada precio muestra la hora de su operación.
+- **Cierres históricos:** del consolidado oficial de todas las bolsas de EE. UU. (SIP). Con ellos se calcula el rendimiento de 30 días.
+- **Límite:** 200 consultas por minuto. Con la consola abierta, Kaligula usa unas 2 por minuto.
+
+> El tiempo real *consolidado* de todas las bolsas (SIP en vivo) solo existe en el plan pago de Alpaca.
+
+Cómo activarlo (son llaves de solo lectura de datos; no hace falta depositar dinero):
+
+1. Crea una cuenta gratuita en [alpaca.markets](https://alpaca.markets). La cuenta de *paper trading* (simulada) basta.
+2. En el panel de Alpaca, ve a la sección de llaves de API de la cuenta de paper trading y genera una llave. Copia el **Key ID** y el **Secret**; el secreto se muestra una sola vez.
+3. Guárdalas según cómo ejecutes Kaligula. Nunca las subas al repositorio (los archivos `.env` están ignorados por git).
+
+   | Ejecución | Archivo |
+   |---|---|
+   | `npm run dev` / `npm run start` | `apps/web/.env.local` |
+   | Docker (`docker compose up`) | `.env` en la raíz |
+   | Escritorio (`.exe`) | `%APPDATA%\@kaligula\desktop\kaligula.env` |
+
+   ```dotenv
+   ALPACA_API_KEY_ID=tu-key-id
+   ALPACA_API_SECRET_KEY=tu-secret
+   ```
+4. Reinicia Kaligula. La tarjeta mostrará «En vivo» y «Datos de Alpaca Markets».
+
+Sin llaves, Kaligula usa como respaldo el endpoint público de gráficos de Yahoo Finance. **No es una API oficial y puede tener retraso**, y la tarjeta lo indica con un aviso. Las fuentes están detrás de un puerto (`PriceHistoryProvider`), así que se pueden cambiar sin tocar la interfaz. CoinGecko sí es una API oficial (requiere atribución, que se muestra en pantalla).
 
 ### Otras funciones
 

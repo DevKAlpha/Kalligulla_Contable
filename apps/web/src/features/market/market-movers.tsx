@@ -15,6 +15,7 @@ const usd = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD',
 const usdSmall = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'USD', currencyDisplay: 'symbol', maximumSignificantDigits: 4 })
 const percent = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' })
 const relative = new Intl.RelativeTimeFormat('es-CO', { numeric: 'auto', style: 'short' })
+const tradeTime = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 const HIGHLIGHTS = 'destacados'
 
 function ago(iso: string, now: number): string {
@@ -42,7 +43,7 @@ function MoverRow({ mover, rank, showNiche }: { mover: MoverDto; rank: number; s
   return (
     <li
       className="grid grid-cols-[1.25rem_auto_minmax(0,1fr)_auto] items-center gap-x-3 py-2.5 sm:grid-cols-[1.25rem_auto_minmax(0,1fr)_5rem_6.5rem_6rem]"
-      title={`${mover.name} · ${price(mover.priceUsd)} · ${percent.format(mover.changePct)} % en 30 días`}
+      title={`${mover.name} · ${price(mover.priceUsd)}${mover.priceTime ? ` (operación del ${tradeTime.format(new Date(mover.priceTime))})` : ''} · ${percent.format(mover.changePct)} % en 30 días`}
     >
       <span className="font-mono text-[12px] text-muted tabular-nums">{rank}</span>
       <span className="grid h-8 min-w-14 place-items-center rounded-lg border-2 border-outline bg-bezel px-1.5 font-mono text-[11px] font-medium text-white">
@@ -87,7 +88,7 @@ export function MarketMovers({ className }: { className?: string }) {
     <Panel className={className} aria-labelledby="movers-title">
       <PanelHeader
         id="movers-title"
-        eyebrow="Mercados · rendimiento de 30 días"
+        eyebrow={data?.source.realtime ? 'Mercados en vivo · rendimiento de 30 días' : 'Mercados · rendimiento de 30 días'}
         title="Mejores rendimientos"
         action={
           <div role="tablist" aria-label="Tipo de activo" className="flex gap-1 rounded-xl border border-line-strong bg-surface p-1">
@@ -142,9 +143,25 @@ export function MarketMovers({ className }: { className?: string }) {
         </>
       )}
 
+      {data && assetClass !== 'crypto' && !data.source.official && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl border border-dashed border-line-strong px-3 py-2 text-[12px] text-ink-2">
+          <Info size={15} aria-hidden className="mt-0.5 shrink-0" />
+          <span>
+            Precios de una fuente pública no oficial, con posible retraso. Para precios oficiales en tiempo real, agrega tus llaves gratuitas de
+            Alpaca (<code className="font-mono">ALPACA_API_KEY_ID</code> y <code className="font-mono">ALPACA_API_SECRET_KEY</code>); el README explica cómo.
+          </span>
+        </p>
+      )}
+
       {data && (
         <div className="mt-3 grid gap-1 text-[12px] text-muted">
           <p className="flex flex-wrap items-center gap-x-2">
+            {data.source.realtime && !data.stale && (
+              <span className="inline-flex items-center gap-1 font-semibold text-ink-2">
+                <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-[#5fd394]" />
+                En vivo
+              </span>
+            )}
             <span>Actualizado {ago(data.fetchedAt, now)}{data.stale ? ' (la fuente no respondió; último valor)' : ''}</span>
             <span aria-hidden className="max-sm:hidden">·</span>
             <span>
@@ -153,7 +170,7 @@ export function MarketMovers({ className }: { className?: string }) {
                 {data.source.name}
                 <ExternalLink size={11} aria-hidden />
               </a>
-              {data.source.official ? '' : ' (fuente pública no oficial)'}
+              : {data.source.note}
             </span>
             <span aria-hidden className="max-sm:hidden">·</span>
             <span>Ranking entre {universe} activos líderes seleccionados{assetClass === 'crypto' ? ' con capitalización mayor a US$ 200 M' : ''}</span>

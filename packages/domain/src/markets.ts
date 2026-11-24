@@ -13,10 +13,16 @@ export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
   crypto: 'Cripto',
 }
 
+export interface MarketAsset {
+  /** Canonical ticker (exchange style, e.g. `BRK.B`). Adapters translate it to each source's format. */
+  symbol: string
+  name: string
+}
+
 export interface SymbolNiche {
   id: string
   label: string
-  symbols: readonly string[]
+  assets: readonly MarketAsset[]
 }
 
 export interface CryptoNiche {
@@ -26,21 +32,56 @@ export interface CryptoNiche {
   category: string
 }
 
+const a = (symbol: string, name: string): MarketAsset => ({ symbol, name })
+
 export const STOCK_NICHES: readonly SymbolNiche[] = [
-  { id: 'tecnologia', label: 'Tecnología', symbols: ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AVGO', 'ORCL', 'AMD', 'CRM', 'ADBE'] },
-  { id: 'salud', label: 'Salud', symbols: ['LLY', 'UNH', 'JNJ', 'ABBV', 'MRK', 'PFE', 'TMO', 'ISRG', 'AMGN'] },
-  { id: 'finanzas', label: 'Finanzas', symbols: ['JPM', 'BAC', 'V', 'MA', 'GS', 'MS', 'WFC', 'BRK-B', 'AXP'] },
-  { id: 'energia', label: 'Energía', symbols: ['XOM', 'CVX', 'COP', 'SLB', 'OXY', 'EOG', 'PSX'] },
-  { id: 'consumo', label: 'Consumo', symbols: ['AMZN', 'TSLA', 'WMT', 'COST', 'KO', 'PG', 'MCD', 'NKE', 'HD'] },
-  { id: 'colombia', label: 'Colombia', symbols: ['EC', 'CIB', 'AVAL', 'TGLS'] },
+  { id: 'tecnologia', label: 'Tecnología', assets: [
+    a('AAPL', 'Apple'), a('MSFT', 'Microsoft'), a('NVDA', 'NVIDIA'), a('GOOGL', 'Alphabet (Google)'), a('META', 'Meta Platforms'),
+    a('AVGO', 'Broadcom'), a('ORCL', 'Oracle'), a('AMD', 'AMD'), a('CRM', 'Salesforce'), a('ADBE', 'Adobe'),
+  ] },
+  { id: 'salud', label: 'Salud', assets: [
+    a('LLY', 'Eli Lilly'), a('UNH', 'UnitedHealth'), a('JNJ', 'Johnson & Johnson'), a('ABBV', 'AbbVie'), a('MRK', 'Merck'),
+    a('PFE', 'Pfizer'), a('TMO', 'Thermo Fisher'), a('ISRG', 'Intuitive Surgical'), a('AMGN', 'Amgen'),
+  ] },
+  { id: 'finanzas', label: 'Finanzas', assets: [
+    a('JPM', 'JPMorgan Chase'), a('BAC', 'Bank of America'), a('V', 'Visa'), a('MA', 'Mastercard'), a('GS', 'Goldman Sachs'),
+    a('MS', 'Morgan Stanley'), a('WFC', 'Wells Fargo'), a('BRK.B', 'Berkshire Hathaway'), a('AXP', 'American Express'),
+  ] },
+  { id: 'energia', label: 'Energía', assets: [
+    a('XOM', 'ExxonMobil'), a('CVX', 'Chevron'), a('COP', 'ConocoPhillips'), a('SLB', 'SLB'), a('OXY', 'Occidental'),
+    a('EOG', 'EOG Resources'), a('PSX', 'Phillips 66'),
+  ] },
+  { id: 'consumo', label: 'Consumo', assets: [
+    a('AMZN', 'Amazon'), a('TSLA', 'Tesla'), a('WMT', 'Walmart'), a('COST', 'Costco'), a('KO', 'Coca-Cola'),
+    a('PG', 'Procter & Gamble'), a('MCD', "McDonald's"), a('NKE', 'Nike'), a('HD', 'Home Depot'),
+  ] },
+  { id: 'colombia', label: 'Colombia', assets: [
+    a('EC', 'Ecopetrol'), a('CIB', 'Bancolombia'), a('AVAL', 'Grupo Aval'), a('TGLS', 'Tecnoglass'),
+  ] },
 ]
 
 export const ETF_NICHES: readonly SymbolNiche[] = [
-  { id: 'indices', label: 'Índices', symbols: ['SPY', 'QQQ', 'DIA', 'IWM', 'VT', 'VWO', 'EFA'] },
-  { id: 'sectores', label: 'Sectores', symbols: ['XLK', 'XLE', 'XLF', 'XLV', 'XLY', 'XLI', 'XLU', 'XLP', 'XLB', 'XLRE', 'XLC'] },
-  { id: 'tematicos', label: 'Temáticos', symbols: ['SMH', 'ARKK', 'ICLN', 'TAN', 'BOTZ', 'URA', 'LIT', 'CIBR'] },
-  { id: 'refugio', label: 'Materias primas y bonos', symbols: ['GLD', 'SLV', 'USO', 'TLT', 'AGG', 'HYG'] },
-  { id: 'latam', label: 'Latinoamérica', symbols: ['ILF', 'EWZ', 'EWW', 'ECH'] },
+  { id: 'indices', label: 'Índices', assets: [
+    a('SPY', 'S&P 500 (SPDR)'), a('QQQ', 'Nasdaq-100 (Invesco)'), a('DIA', 'Dow Jones (SPDR)'), a('IWM', 'Russell 2000 (iShares)'),
+    a('VT', 'Mercado mundial (Vanguard)'), a('VWO', 'Mercados emergentes (Vanguard)'), a('EFA', 'Desarrollados ex EE. UU. (iShares)'),
+  ] },
+  { id: 'sectores', label: 'Sectores', assets: [
+    a('XLK', 'Tecnología (SPDR)'), a('XLE', 'Energía (SPDR)'), a('XLF', 'Financiero (SPDR)'), a('XLV', 'Salud (SPDR)'),
+    a('XLY', 'Consumo discrecional (SPDR)'), a('XLI', 'Industrial (SPDR)'), a('XLU', 'Servicios públicos (SPDR)'),
+    a('XLP', 'Consumo básico (SPDR)'), a('XLB', 'Materiales (SPDR)'), a('XLRE', 'Inmobiliario (SPDR)'), a('XLC', 'Comunicaciones (SPDR)'),
+  ] },
+  { id: 'tematicos', label: 'Temáticos', assets: [
+    a('SMH', 'Semiconductores (VanEck)'), a('ARKK', 'Innovación disruptiva (ARK)'), a('ICLN', 'Energía limpia (iShares)'),
+    a('TAN', 'Energía solar (Invesco)'), a('BOTZ', 'Robótica e IA (Global X)'), a('URA', 'Uranio (Global X)'),
+    a('LIT', 'Litio y baterías (Global X)'), a('CIBR', 'Ciberseguridad (First Trust)'),
+  ] },
+  { id: 'refugio', label: 'Materias primas y bonos', assets: [
+    a('GLD', 'Oro (SPDR)'), a('SLV', 'Plata (iShares)'), a('USO', 'Petróleo (USO)'), a('TLT', 'Bonos del Tesoro 20+ años (iShares)'),
+    a('AGG', 'Bonos EE. UU. agregados (iShares)'), a('HYG', 'Bonos high yield (iShares)'),
+  ] },
+  { id: 'latam', label: 'Latinoamérica', assets: [
+    a('ILF', 'Latinoamérica 40 (iShares)'), a('EWZ', 'Brasil (iShares)'), a('EWW', 'México (iShares)'), a('ECH', 'Chile (iShares)'),
+  ] },
 ]
 
 export const CRYPTO_NICHES: readonly CryptoNiche[] = [
