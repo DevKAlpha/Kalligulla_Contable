@@ -2,6 +2,7 @@
 
 import { formatMoney, type CategoryShare } from '@kaligula/domain'
 import { PieChart } from 'lucide-react'
+import Link from 'next/link'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/panel'
 
 const percent = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
@@ -23,7 +24,12 @@ export function CategoryBreakdown({ breakdown, className }: { breakdown: readonl
 
   return (
     <Panel className={className} aria-labelledby="categories-title">
-      <PanelHeader id="categories-title" eyebrow="Este mes" title="Gastos por categoría" />
+      <PanelHeader
+        id="categories-title"
+        eyebrow="Este mes"
+        title="Gastos por categoría"
+        action={<Link href="/gastos/comparar" className="shrink-0 text-[13px] font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline">Comparar →</Link>}
+      />
       {rows.length === 0 ? (
         <EmptyState icon={<PieChart size={20} aria-hidden />} title="Sin gastos este mes">
           Cuando registres gastos verás aquí en qué se va tu dinero.

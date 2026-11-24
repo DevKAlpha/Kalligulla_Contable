@@ -1,7 +1,7 @@
 import type { CategoryCreateInput, MovementInput } from '@kaligula/contracts'
 import {
-  buildOverview, DomainError, newId, normalizeCategoryName, normalizeDraft, overviewWindowStart,
-  type Movement, type MovementType, type Overview,
+  buildOverview, compareMonths, DomainError, monthBounds, newId, normalizeCategoryName, normalizeDraft, overviewWindowStart,
+  type MonthComparison, type Movement, type MovementType, type Overview,
 } from '@kaligula/domain'
 import { ConflictError, NotFoundError } from '../../shared/errors'
 import type { CategoryWithUsage, LedgerRepository, MovementQuery } from './ports'
@@ -99,6 +99,18 @@ export function createLedgerService({ repository, clock = () => new Date() }: Le
         repository.movementsSince(owner, overviewWindowStart(6, reference)),
       ])
       return buildOverview({ totals, counts, recent, reference })
+    },
+
+    /** Spending of two months side by side (base vs target), plus the dates that have data. */
+    async compareMonths(owner: string, baseKey: string, targetKey: string): Promise<MonthComparison & { range: { first: string | null; last: string | null } }> {
+      const base = monthBounds(baseKey)
+      const target = monthBounds(targetKey)
+      const [baseMovements, targetMovements, range] = await Promise.all([
+        repository.movementsBetween(owner, base.from, base.to),
+        baseKey === targetKey ? Promise.resolve([]) : repository.movementsBetween(owner, target.from, target.to),
+        repository.occurrenceRange(owner),
+      ])
+      return { ...compareMonths({ baseKey, targetKey, movements: [...baseMovements, ...targetMovements], today: clock() }), range }
     },
   }
 }

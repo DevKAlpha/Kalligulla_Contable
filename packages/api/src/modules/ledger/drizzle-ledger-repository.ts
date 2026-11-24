@@ -1,6 +1,6 @@
 import { categories, movements, type Database } from '@kaligula/db'
 import { emptyByType, SYSTEM_CATEGORY_NAME, type Category, type Movement, type MovementType } from '@kaligula/domain'
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, max, min, or, sql, type SQL } from 'drizzle-orm'
 import type { CategoryWithUsage, LedgerRepository, MovementQuery } from './ports'
 
 const movementColumns = {
@@ -186,6 +186,20 @@ export function createDrizzleLedgerRepository(db: Database): LedgerRepository {
         counts[row.type as MovementType] = row.count
       }
       return { totals, counts }
+    },
+
+    async movementsBetween(owner, from, to) {
+      const rows = await db.select(movementColumns).from(movements)
+        .innerJoin(categories, eq(movements.categoryId, categories.id))
+        .where(and(eq(movements.ownerId, owner), gte(movements.occurredOn, from), lte(movements.occurredOn, to)))
+        .orderBy(desc(movements.occurredOn), desc(movements.createdAt))
+      return rows.map(toMovement)
+    },
+
+    async occurrenceRange(owner) {
+      const [row] = await db.select({ first: min(movements.occurredOn), last: max(movements.occurredOn) })
+        .from(movements).where(eq(movements.ownerId, owner))
+      return { first: row?.first ?? null, last: row?.last ?? null }
     },
 
     async movementsSince(owner, from) {

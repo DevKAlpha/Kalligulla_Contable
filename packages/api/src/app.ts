@@ -7,10 +7,12 @@ import { createOwnerBootstrap, localOwnerResolver, type OwnerResolver } from './
 import { createProfileRepository, profileRoutes } from './modules/identity/profile'
 import { createDrizzleLedgerRepository } from './modules/ledger/drizzle-ledger-repository'
 import { createLedgerService } from './modules/ledger/ledger-service'
-import { categoryRoutes, movementRoutes, overviewRoutes } from './modules/ledger/routes'
+import { categoryRoutes, comparisonRoutes, movementRoutes, overviewRoutes } from './modules/ledger/routes'
 import { createFxTicker } from './modules/market-data/application/fx-ticker'
 import { createGetLatestTrm } from './modules/market-data/application/get-latest-trm'
+import { createMarketMovers } from './modules/market-data/application/market-movers'
 import type { FxProvider } from './modules/market-data/domain/fx-provider'
+import type { CryptoMarketProvider, PriceHistoryProvider } from './modules/market-data/domain/movers-providers'
 import type { TrmProvider } from './modules/market-data/domain/trm-provider'
 import { marketDataRoutes } from './modules/market-data/http/routes'
 import { toErrorResponse } from './shared/errors'
@@ -23,6 +25,8 @@ export interface AppDependencies {
   database: DatabaseHandle
   trmProvider: TrmProvider
   fxProvider: FxProvider
+  priceHistoryProvider: PriceHistoryProvider
+  cryptoMarketProvider: CryptoMarketProvider
   clock?: () => Date
   ownerResolver?: OwnerResolver
   /** Host names the API answers to, or '*' to disable the check. */
@@ -33,7 +37,7 @@ export interface AppDependencies {
 }
 
 /** Routes that read or write the owner's data. */
-const OWNER_SCOPES = ['/profile', '/categories', '/movements', '/goals', '/overview', '/backup'] as const
+const OWNER_SCOPES = ['/profile', '/categories', '/movements', '/goals', '/overview', '/comparison', '/backup'] as const
 
 /**
  * Composition root of the HTTP API. Each module receives only its dependencies,
@@ -67,12 +71,14 @@ export function createApp(deps: AppDependencies) {
   app.route('/market', marketDataRoutes({
     getLatestTrm: createGetLatestTrm({ provider: deps.trmProvider, clock, ttlMs: deps.trmTtlMs }),
     fxTicker,
+    marketMovers: createMarketMovers({ prices: deps.priceHistoryProvider, crypto: deps.cryptoMarketProvider, clock }),
     heartbeatMs: deps.sseHeartbeatMs,
   }))
   app.route('/profile', profileRoutes(createProfileRepository(db), clock))
   app.route('/categories', categoryRoutes(ledger))
   app.route('/movements', movementRoutes(ledger))
   app.route('/overview', overviewRoutes(ledger))
+  app.route('/comparison', comparisonRoutes(ledger))
   app.route('/goals', createGoalsModule(db, clock))
   app.route('/backup', createBackupModule(db, clock))
 

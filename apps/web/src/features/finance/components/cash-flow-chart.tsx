@@ -2,6 +2,7 @@
 
 import { formatMoney, type CashFlowMonth } from '@kaligula/domain'
 import { Panel, PanelHeader } from '@/components/ui/panel'
+import { niceMax } from '@/lib/chart'
 import { cn } from '@/lib/cn'
 
 const monthShort = new Intl.DateTimeFormat('es-CO', { month: 'short' })
@@ -10,14 +11,6 @@ const monthLong = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numer
 function monthDate(key: string) {
   const [year, month] = key.split('-').map(Number)
   return new Date(year, month - 1, 1)
-}
-
-/** Rounds the axis maximum up to 1, 2 or 5 × 10ⁿ so gridline labels read cleanly. */
-function niceMax(value: number) {
-  if (value <= 0) return 1
-  const power = 10 ** Math.floor(Math.log10(value))
-  const scaled = value / power
-  return (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power
 }
 
 function Bar({ value, max, className }: { value: number; max: number; className: string }) {

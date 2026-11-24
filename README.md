@@ -87,6 +87,34 @@ El inicio muestra **USD, EUR y KRW (won surcoreano) en COP**. Para el USD muestr
 - **Ritmo real del mercado:** el mercado USD/COP opera en horario hábil de Colombia, así que fuera de ese horario el valor puede no cambiar aunque la consulta se repita.
 - **Más monedas:** para agregar otra moneda basta con añadir su código en `packages/domain/src/currencies.ts`.
 
+### Comparar gastos (`/gastos/comparar`)
+
+Compara los gastos de dos meses cualesquiera. Por defecto, el mes actual frente al anterior; también puedes elegir cualquier mes de cualquier año, compararlo con el mismo mes del año pasado o intercambiar los dos.
+
+- **Resumen:** gastos, gasto diario promedio, ingresos y ahorro neto de cada mes, con la diferencia.
+- **Ritmo de gasto:** gasto acumulado día a día de ambos meses. Si el mes comparado sigue en curso, también se miden al mismo día (por ejemplo, «al día 23 llevas X; a esa fecha del mes base llevabas Y»), para no comparar un mes incompleto con uno completo.
+- **Por categoría:** barras lado a lado, con la diferencia en pesos y en porcentaje. Las categorías nuevas o que desaparecen se señalan.
+- **Lo más importante:** frases con el cambio total, la categoría que más subió y la que más bajó, los gastos nuevos y el mayor gasto del mes.
+- **Top 5** de gastos de cada mes.
+
+Los meses elegidos quedan en la URL (`?base=2026-10&target=2026-11`), así que se pueden recargar o compartir.
+
+### Mejores rendimientos (inicio)
+
+Ranking de los activos con mejor rendimiento en los **últimos 30 días**, por nichos:
+
+| Clase | Nichos | Fuente |
+|---|---|---|
+| Acciones | Tecnología, Salud, Finanzas, Energía, Consumo, Colombia (ADR: Ecopetrol, Bancolombia, Grupo Aval, Tecnoglass) | Yahoo Finance |
+| ETF | Índices, Sectores, Temáticos, Materias primas y bonos, Latinoamérica | Yahoo Finance |
+| Cripto | Capa 1, DeFi, Inteligencia artificial, Memes | CoinGecko |
+
+- El ranking se calcula **dentro de una selección curada de activos líderes** por nicho, no sobre todo el mercado. La lista se edita en `packages/domain/src/markets.ts`.
+- En cripto se excluyen las stablecoins y los tokens envueltos o en staking, y solo entran activos con capitalización mayor a US$ 200 M.
+- El servidor guarda cada ranking en caché (15 min para acciones y ETF, 10 min para cripto) y lo actualiza al consultarlo.
+- **Yahoo Finance no tiene una API oficial:** Kaligula usa su endpoint público de gráficos, que puede cambiar o limitar el acceso sin aviso. La fuente está detrás de un puerto (`PriceHistoryProvider`), así que puede reemplazarse por un proveedor con llave (Twelve Data, Polygon, etc.) sin tocar el resto. CoinGecko sí es una API oficial (requiere atribución, que se muestra en pantalla).
+- Es información educativa: rendimientos pasados no garantizan resultados futuros y no es asesoría de inversión.
+
 ### Otras funciones
 
 - **TRM oficial** en el bisel de la consola, desde datos.gov.co, con caché de 30 minutos.
@@ -177,10 +205,12 @@ Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores s
 | GET · POST | `/api/goals` | Listar y crear metas |
 | PUT · DELETE | `/api/goals/:id` | Actualizar y eliminar |
 | GET | `/api/overview` | Resumen calculado: saldo, mes actual y anterior, flujo de 6 meses, gastos por categoría |
+| GET | `/api/comparison?base=AAAA-MM&target=AAAA-MM` | Comparación de dos meses: resumen, categorías, ritmo diario, top de gastos y hallazgos |
 | GET | `/api/backup` | Exportar todo como respaldo |
 | POST | `/api/backup/restore` | Reemplazar todo con un respaldo (transacción atómica, máximo 20 MB) |
 | GET | `/api/market/trm` | TRM oficial, o `503` si no está disponible |
 | GET | `/api/market/fx` | USD, EUR y KRW en COP |
+| GET | `/api/market/movers?class=stocks\|etfs\|crypto` | Mejores rendimientos de 30 días por nicho (`503` si la fuente no responde y no hay caché) |
 | GET | `/api/market/fx/stream` | Las mismas cotizaciones en vivo, por Server-Sent Events (evento `snapshot`) |
 
 ## Próximas fases

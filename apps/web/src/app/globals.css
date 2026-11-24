@@ -34,6 +34,8 @@
   --invest-soft: #dff3f6;
   --loan-soft: #fde4ea;
   --positive: #1f7a4a;
+  /* Month comparison: base month (blue) vs compared month (expense orange). CVD-validated pair. */
+  --cmp-base: #4f7cc9;
   --negative: #b8432a;
   --focus: #6b5ce7;
   --key-shadow: 0 4px 0 var(--outline);
@@ -69,6 +71,7 @@
   --invest-soft: #12333a;
   --loan-soft: #3d1c26;
   --positive: #5fd394;
+  --cmp-base: #5f8fd8;
   --negative: #ff8a6b;
   --focus: #b3a9ff;
 }
@@ -104,6 +107,8 @@
   --color-invest-soft: var(--invest-soft);
   --color-loan-soft: var(--loan-soft);
   --color-positive: var(--positive);
+  --color-cmp-base: var(--cmp-base);
+  --color-cmp-target: var(--expense);
   --color-negative: var(--negative);
   --color-focus: var(--focus);
 }

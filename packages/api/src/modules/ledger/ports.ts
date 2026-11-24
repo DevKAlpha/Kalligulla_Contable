@@ -38,4 +38,8 @@ export interface LedgerRepository {
 
   totalsByType(owner: string): Promise<{ totals: Record<MovementType, number>; counts: Record<MovementType, number> }>
   movementsSince(owner: string, from: IsoDate): Promise<Movement[]>
+  /** Every movement between two dates, inclusive. */
+  movementsBetween(owner: string, from: IsoDate, to: IsoDate): Promise<Movement[]>
+  /** Dates of the oldest and newest movement. */
+  occurrenceRange(owner: string): Promise<{ first: IsoDate | null; last: IsoDate | null }>
 }

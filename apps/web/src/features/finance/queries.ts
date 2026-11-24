@@ -3,7 +3,7 @@
 import type { CategoryDto, GoalInput, MovementDto, MovementInput, MovementPage } from '@kaligula/contracts'
 import type { FinanceSnapshot, MovementType } from '@kaligula/domain'
 import {
-  useInfiniteQuery, useMutation, useQuery, useQueryClient,
+  keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient,
   type InfiniteData, type QueryClient,
 } from '@tanstack/react-query'
 import { useMemo } from 'react'
@@ -14,6 +14,7 @@ export const queryKeys = {
   categories: ['categories'] as const,
   movements: ['movements'] as const,
   overview: ['overview'] as const,
+  comparison: ['comparison'] as const,
   goals: ['goals'] as const,
   health: ['health'] as const,
 }
@@ -31,6 +32,7 @@ function invalidateLedger(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: queryKeys.movements }),
     client.invalidateQueries({ queryKey: queryKeys.overview }),
+    client.invalidateQueries({ queryKey: queryKeys.comparison }),
     client.invalidateQueries({ queryKey: queryKeys.categories }),
   ])
 }
@@ -59,6 +61,15 @@ export function useCategoriesOf(types: readonly MovementType[]) {
 
 export function useOverview() {
   return useQuery({ queryKey: queryKeys.overview, queryFn: ({ signal }) => api.overview(signal) })
+}
+
+/** Two months side by side; keeps showing the previous result while a new pair loads. */
+export function useComparison(base: string, target: string) {
+  return useQuery({
+    queryKey: [...queryKeys.comparison, base, target],
+    queryFn: ({ signal }) => api.comparison(base, target, signal),
+    placeholderData: keepPreviousData,
+  })
 }
 
 export function useGoals() {

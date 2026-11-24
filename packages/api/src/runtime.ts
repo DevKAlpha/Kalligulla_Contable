@@ -3,6 +3,7 @@ import { migrate, openDatabase, type DatabaseHandle } from '@kaligula/db'
 import { createApp, type KaligulaApp } from './app'
 import { createAwesomeApiFxProvider, createErApiFxProvider, createFallbackFxProvider } from './modules/market-data/infrastructure/fx-providers'
 import { createDatosGovTrmProvider } from './modules/market-data/infrastructure/datos-gov-trm-provider'
+import { createCoinGeckoProvider, createYahooPriceHistoryProvider } from './modules/market-data/infrastructure/movers-providers'
 import { DEFAULT_ALLOWED_HOSTS } from './shared/security'
 
 export interface Runtime {
@@ -25,6 +26,7 @@ function allowedHosts(env: Env): readonly string[] | '*' {
  * - KALIGULA_ALLOWED_HOSTS: extra host names, comma separated ('*' disables the check).
  * - FX_REFRESH_SECONDS: live quote refresh interval (default 60, minimum 15).
  * - AWESOMEAPI_KEY: optional key for higher AwesomeAPI quotas.
+ * - COINGECKO_API_KEY: optional CoinGecko demo key for higher rate limits.
  */
 export async function createRuntime(env: Env = process.env): Promise<Runtime> {
   const database = await openDatabase(
@@ -40,6 +42,8 @@ export async function createRuntime(env: Env = process.env): Promise<Runtime> {
     database,
     trmProvider: createDatosGovTrmProvider(),
     fxProvider: createFallbackFxProvider([createAwesomeApiFxProvider({ apiKey: env.AWESOMEAPI_KEY }), createErApiFxProvider()]),
+    priceHistoryProvider: createYahooPriceHistoryProvider(),
+    cryptoMarketProvider: createCoinGeckoProvider({ apiKey: env.COINGECKO_API_KEY }),
     fxRefreshMs: Math.max(15, Number(env.FX_REFRESH_SECONDS) || 60) * 1000,
     allowedHosts: allowedHosts(env),
   })

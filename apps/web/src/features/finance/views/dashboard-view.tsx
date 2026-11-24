@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Eyebrow, Panel, PanelHeader } from '@/components/ui/panel'
 import { ErrorState, Skeleton } from '@/components/ui/states'
 import { FxBoard } from '@/features/market/fx-board'
+import { MarketMovers } from '@/features/market/market-movers'
 import { useUiStore } from '@/features/ui/ui-store'
 import { CashFlowChart } from '../components/cash-flow-chart'
 import { CategoryBreakdown } from '../components/category-breakdown'
@@ -82,6 +83,8 @@ export function DashboardView() {
           {overview.isSuccess ? <CategoryBreakdown breakdown={overview.data.expenseBreakdown} /> : <Skeleton className="h-56 rounded-2xl" />}
         </div>
       </div>
+
+      <MarketMovers className="mt-3" />
     </PageFrame>
   )
 }

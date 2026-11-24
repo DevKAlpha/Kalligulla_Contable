@@ -2,7 +2,8 @@
 
 import type { MovementDto, OverviewDto } from '@kaligula/contracts'
 import { formatMoney, shiftMonth, toIsoDate, monthKey, type MovementType } from '@kaligula/domain'
-import { Plus, Search, Tags } from 'lucide-react'
+import { ChartNoAxesColumn, Plus, Search, Tags } from 'lucide-react'
+import Link from 'next/link'
 import { useDeferredValue, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Eyebrow, Panel, PanelHeader } from '@/components/ui/panel'
@@ -132,6 +133,15 @@ export function ModuleView({ id }: { id: ModuleId }) {
             <p className="mt-3 text-[15px] text-ink-2">{config.description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {id === 'gastos' && (
+              <Link
+                href="/gastos/comparar"
+                className="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-outline bg-surface px-5 text-[15px] font-semibold shadow-[3px_3px_0_var(--outline)] hover:bg-surface-2 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+              >
+                <ChartNoAxesColumn size={18} aria-hidden />
+                Comparar meses
+              </Link>
+            )}
             <Button size="lg" variant="secondary" onClick={() => openCategories(config.entryType)}>
               <Tags size={18} aria-hidden />
               Categorías

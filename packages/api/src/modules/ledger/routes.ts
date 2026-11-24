@@ -1,5 +1,5 @@
 import {
-  categoryCreateSchema, categoryUpdateSchema, movementInputSchema, movementListQuerySchema,
+  categoryCreateSchema, categoryUpdateSchema, comparisonQuerySchema, movementInputSchema, movementListQuerySchema,
 } from '@kaligula/contracts'
 import { Hono } from 'hono'
 import { readJson, readQuery, uuidParam, type AppEnv } from '../../shared/http'
@@ -39,5 +39,13 @@ export function overviewRoutes(service: LedgerService) {
   return new Hono<AppEnv>().get('/', async (c) => {
     c.header('Cache-Control', 'no-store')
     return c.json(await service.overview(c.var.owner))
+  })
+}
+
+export function comparisonRoutes(service: LedgerService) {
+  return new Hono<AppEnv>().get('/', async (c) => {
+    const { base, target } = readQuery(c, comparisonQuerySchema)
+    c.header('Cache-Control', 'no-store')
+    return c.json(await service.compareMonths(c.var.owner, base, target))
   })
 }

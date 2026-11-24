@@ -1,4 +1,4 @@
-import { FX_CODES, MOVEMENT_TYPES } from '@kaligula/domain'
+import { ASSET_CLASSES, FX_CODES, isMonthKey, MOVEMENT_TYPES } from '@kaligula/domain'
 import { z } from 'zod'
 
 /*
@@ -202,3 +202,88 @@ export const fxSnapshotSchema = z.object({
 })
 export type FxQuote = z.infer<typeof fxQuoteSchema>
 export type FxSnapshot = z.infer<typeof fxSnapshotSchema>
+
+/* ---------- Month comparison ---------- */
+
+export const monthKeySchema = z.string().refine(isMonthKey, 'Mes inválido (usa AAAA-MM).')
+export const comparisonQuerySchema = z.object({ base: monthKeySchema, target: monthKeySchema })
+
+const monthStatsSchema = z.object({
+  key: z.string(),
+  incomeMinor: minor,
+  expenseMinor: minor,
+  netMinor: minor,
+  expenseCount: z.number().int().nonnegative(),
+  avgExpenseMinor: minor,
+  elapsedDays: z.number().int().nonnegative(),
+  dailyAvgExpenseMinor: minor,
+})
+const expenseItemSchema = z.object({ id: z.string(), description: z.string(), category: z.string(), amountMinor: minor, occurredOn: isoDate })
+const nullablePct = z.number().nullable()
+export const comparisonInsightSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('total'), deltaMinor: minor, deltaPct: nullablePct }),
+  z.object({ kind: z.literal('pace'), day: z.number().int(), baseMinor: minor, targetMinor: minor, deltaPct: nullablePct }),
+  z.object({ kind: z.enum(['category_up', 'category_down']), category: z.string(), deltaMinor: minor, deltaPct: nullablePct }),
+  z.object({ kind: z.enum(['new_category', 'gone_category']), category: z.string(), amountMinor: minor }),
+  z.object({ kind: z.literal('biggest_expense'), description: z.string(), category: z.string(), amountMinor: minor, occurredOn: isoDate }),
+])
+export const comparisonSchema = z.object({
+  base: monthStatsSchema,
+  target: monthStatsSchema,
+  categories: z.array(z.object({
+    category: z.string(),
+    baseMinor: minor,
+    targetMinor: minor,
+    deltaMinor: minor,
+    deltaPct: nullablePct,
+    baseCount: z.number().int(),
+    targetCount: z.number().int(),
+  })),
+  pace: z.object({
+    base: z.array(minor),
+    target: z.array(minor),
+    compareDay: z.number().int().nullable(),
+    baseAtDay: minor.nullable(),
+    targetAtDay: minor.nullable(),
+  }),
+  topExpenses: z.object({ base: z.array(expenseItemSchema), target: z.array(expenseItemSchema) }),
+  insights: z.array(comparisonInsightSchema),
+  /** First and last dates with records, to offer only months that have data. */
+  range: z.object({ first: isoDate.nullable(), last: isoDate.nullable() }),
+})
+export type ComparisonDto = z.infer<typeof comparisonSchema>
+export type ComparisonInsightDto = z.infer<typeof comparisonInsightSchema>
+
+/* ---------- Market movers ---------- */
+
+export const assetClassSchema = z.enum(ASSET_CLASSES)
+export const moverSchema = z.object({
+  symbol: z.string(),
+  name: z.string(),
+  /** Niche the asset belongs to (useful in the highlights list). */
+  niche: z.string(),
+  priceUsd: z.number().positive(),
+  /** Return over `periodDays`, in percent. */
+  changePct: z.number(),
+  /** 7-day return, when the source provides it (crypto). */
+  change7dPct: z.number().nullable(),
+  /** Closing prices over the period, oldest first (empty when the source has no history). */
+  sparkline: z.array(z.number()),
+})
+export const moversSchema = z.object({
+  assetClass: assetClassSchema,
+  periodDays: z.number().int().positive(),
+  highlights: z.array(moverSchema),
+  niches: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    /** How many assets were ranked in the niche. */
+    universe: z.number().int().nonnegative(),
+    items: z.array(moverSchema),
+  })),
+  source: z.object({ name: z.string(), url: z.url(), official: z.boolean() }),
+  fetchedAt: isoDateTime,
+  stale: z.boolean(),
+})
+export type MoverDto = z.infer<typeof moverSchema>
+export type MoversDto = z.infer<typeof moversSchema>

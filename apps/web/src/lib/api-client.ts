@@ -1,9 +1,9 @@
 import {
-  apiErrorSchema, categoryListSchema, categorySchema, fxSnapshotSchema, goalListSchema, goalSchema, healthSchema,
-  movementPageSchema, movementSchema, overviewSchema, profileSchema, restoreResultSchema, snapshotSchema, trmQuoteSchema,
+  apiErrorSchema, categoryListSchema, categorySchema, comparisonSchema, fxSnapshotSchema, goalListSchema, goalSchema, healthSchema,
+  movementPageSchema, movementSchema, moversSchema, overviewSchema, profileSchema, restoreResultSchema, snapshotSchema, trmQuoteSchema,
   type CategoryCreateInput, type GoalInput, type MovementInput, type MovementListQuery,
 } from '@kaligula/contracts'
-import type { FinanceSnapshot } from '@kaligula/domain'
+import type { AssetClass, FinanceSnapshot } from '@kaligula/domain'
 import { z, type ZodType } from 'zod'
 
 /** Failed API call. `field` names the input the server rejected, when it applies. */
@@ -79,6 +79,8 @@ export const api = {
   deleteMovement: (id: string) => request<void>(`/movements/${id}`, { method: 'DELETE' }),
 
   overview: (signal?: AbortSignal) => request('/overview', { schema: overviewSchema, signal }),
+  comparison: (base: string, target: string, signal?: AbortSignal) =>
+    request(`/comparison?${new URLSearchParams({ base, target })}`, { schema: comparisonSchema, signal }),
 
   listGoals: (signal?: AbortSignal) => request('/goals', { schema: goalListSchema, signal }).then((data) => data.items),
   createGoal: (input: GoalInput) => request('/goals', { method: 'POST', body: input, schema: goalSchema }),
@@ -90,6 +92,7 @@ export const api = {
 
   trm: (signal?: AbortSignal) => request('/market/trm', { schema: trmQuoteSchema, signal }),
   fx: (signal?: AbortSignal) => request('/market/fx', { schema: fxSnapshotSchema, signal }),
+  movers: (assetClass: AssetClass, signal?: AbortSignal) => request(`/market/movers?class=${assetClass}`, { schema: moversSchema, signal }),
 }
 
 /** User-facing message for any error thrown by the client. */

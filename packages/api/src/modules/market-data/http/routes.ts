@@ -1,8 +1,10 @@
-import type { FxSnapshot } from '@kaligula/contracts'
+import { assetClassSchema, type FxSnapshot } from '@kaligula/contracts'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import type { AppEnv } from '../../../shared/http'
+import { z } from 'zod'
+import { readQuery, type AppEnv } from '../../../shared/http'
 import type { FxTicker } from '../application/fx-ticker'
+import type { MarketMovers } from '../application/market-movers'
 import type { GetLatestTrm } from '../application/get-latest-trm'
 import { UpstreamUnavailableError } from '../domain/trm-provider'
 
@@ -11,11 +13,14 @@ const upstreamError = (error: UpstreamUnavailableError) => ({ error: { code: 'up
 export interface MarketDataRoutesOptions {
   getLatestTrm: GetLatestTrm
   fxTicker: FxTicker
+  marketMovers: MarketMovers
   /** Keep-alive comment interval for the live stream (proxies drop idle connections). */
   heartbeatMs?: number
 }
 
-export function marketDataRoutes({ getLatestTrm, fxTicker, heartbeatMs = 15_000 }: MarketDataRoutesOptions) {
+const moversQuery = z.object({ class: assetClassSchema })
+
+export function marketDataRoutes({ getLatestTrm, fxTicker, marketMovers, heartbeatMs = 15_000 }: MarketDataRoutesOptions) {
   return new Hono<AppEnv>()
     .get('/trm', async (c) => {
       try {
@@ -32,6 +37,19 @@ export function marketDataRoutes({ getLatestTrm, fxTicker, heartbeatMs = 15_000 
       try {
         c.header('Cache-Control', 'no-store')
         return c.json(await fxTicker.current())
+      } catch (error) {
+        if (error instanceof UpstreamUnavailableError) return c.json(upstreamError(error), 503)
+        throw error
+      }
+    })
+
+    /** Best performers of the last 30 days per niche: `?class=stocks|etfs|crypto`. */
+    .get('/movers', async (c) => {
+      const { class: assetClass } = readQuery(c, moversQuery)
+      try {
+        const movers = await marketMovers.get(assetClass)
+        c.header('Cache-Control', 'private, max-age=60')
+        return c.json(movers)
       } catch (error) {
         if (error instanceof UpstreamUnavailableError) return c.json(upstreamError(error), 503)
         throw error
