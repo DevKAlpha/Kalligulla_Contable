@@ -62,18 +62,27 @@ export interface PadItem {
   active: boolean
 }
 
-const DPAD_SLOT: Record<Direction, string> = {
-  up: 'col-start-2 row-start-1 dark:rounded-b-[3px]',
-  right: 'col-start-3 row-start-2 dark:rounded-l-[3px]',
-  down: 'col-start-2 row-start-3 dark:rounded-t-[3px]',
-  left: 'col-start-1 row-start-2 dark:rounded-r-[3px]',
+const DPAD_CELL: Record<Direction, string> = {
+  up: 'col-start-2 row-start-1',
+  right: 'col-start-3 row-start-2',
+  down: 'col-start-2 row-start-3',
+  left: 'col-start-1 row-start-2',
 }
+/** Inner corners of the cross arms, squared so the arms meet the hub. */
+const CROSS_INNER: Record<Direction, string> = { up: 'rounded-b-[3px]', right: 'rounded-l-[3px]', down: 'rounded-t-[3px]', left: 'rounded-r-[3px]' }
+const CROSS_INNER_DARK: Record<Direction, string> = { up: 'dark:rounded-b-[3px]', right: 'dark:rounded-l-[3px]', down: 'dark:rounded-t-[3px]', left: 'dark:rounded-r-[3px]' }
 export const ARROW: Record<Direction, string> = { up: '▲', right: '▶', down: '▼', left: '◀' }
 
-/** Light: four round arrow buttons. Dark: a one-piece cross. */
-export function DPad({ items, onPress, size = 'lg' }: { items: readonly PadItem[]; onPress: (direction: Direction) => void; size?: 'sm' | 'lg' }) {
+/** `theme`: four round arrow buttons in light, a one-piece cross in dark. `cross`: always a cross (brick handheld). */
+export function DPad({ items, onPress, size = 'lg', variant = 'theme' }: {
+  items: readonly PadItem[]
+  onPress: (direction: Direction) => void
+  size?: 'sm' | 'lg'
+  variant?: 'theme' | 'cross'
+}) {
+  const cross = variant === 'cross'
   return (
-    <div className={cn('grid shrink-0 grid-cols-3 grid-rows-3', size === 'lg' ? 'size-[132px]' : 'size-[108px]')}>
+    <div className={cn('grid shrink-0 grid-cols-3 grid-rows-3', size === 'lg' ? 'size-[132px]' : 'size-[102px]')}>
       {items.map((item) => (
         <Link
           key={item.href}
@@ -84,15 +93,16 @@ export function DPad({ items, onPress, size = 'lg' }: { items: readonly PadItem[
           onClick={() => onPress(item.direction)}
           className={cn(
             KEY,
-            DPAD_SLOT[item.direction],
-            'm-[3px] rounded-full bg-pad-button text-pad-button-text dark:m-0 dark:rounded-[9px]',
+            DPAD_CELL[item.direction],
+            'bg-pad-button text-pad-button-text',
+            cross ? ['rounded-[8px]', CROSS_INNER[item.direction]] : ['m-[3px] rounded-full dark:m-0 dark:rounded-[9px]', CROSS_INNER_DARK[item.direction]],
             'aria-[current=page]:bg-accent aria-[current=page]:text-on-accent aria-[current=page]:shadow-[0_0_0_3px_rgb(198_240_90/0.35),0_3px_0_var(--outline)]',
           )}
         >
           <item.icon aria-hidden className={size === 'lg' ? 'size-[18px]' : 'size-4'} strokeWidth={2.4} />
         </Link>
       ))}
-      <span aria-hidden className="col-start-2 row-start-2 hidden border-y-2 border-outline bg-pad-button dark:block" />
+      <span aria-hidden className={cn('col-start-2 row-start-2 border-y-2 border-outline bg-pad-button', cross ? 'block' : 'hidden dark:block')} />
     </div>
   )
 }

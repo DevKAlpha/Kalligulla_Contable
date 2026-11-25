@@ -168,6 +168,36 @@ Kaligula lee la hoja de posiciones abiertas (encabezados en inglés o en españo
 - **Procesamiento local:** el archivo se lee en el propio servidor de Kaligula, sin librerías externas.
 - **Límites:** máximo 10 MB, con tope de tamaño descomprimido contra archivos maliciosos.
 
+### Noticias que mueven tus divisas (`/noticias`)
+
+Apartado en vivo con las noticias que afectan a la economía mundial y al peso colombiano, el dólar, el euro y el won surcoreano. También aparece un resumen en el inicio y un acceso con contador de noticias nuevas en la cabecera.
+
+**Fuentes (feeds RSS públicos, revisados cada 2 a 5 minutos):**
+
+| Tipo | Fuentes |
+|---|---|
+| Oficiales | Reserva Federal de EE. UU., Banco Central Europeo |
+| Colombia (COP) | Valora Analitik, Portafolio, La República, El Tiempo |
+| Latinoamérica | Bloomberg Línea |
+| Divisas | FXStreet (en español) |
+| Global (USD) | CNBC Economy, MarketWatch, BBC Business |
+| Corea (KRW) | Yonhap, The Korea Herald |
+
+El Banco de la República y el Banco de Corea no publican un feed vigente, así que el peso y el won se cubren con medios de cada país.
+
+**Cómo funciona:**
+
+- **En vivo:** el servidor revisa las fuentes solo mientras hay alguien conectado y envía los cambios por Server-Sent Events (`/api/news/stream`).
+- **Peticiones condicionales:** usa `ETag` y `Last-Modified`, así que un feed sin cambios responde 304 y casi no consume datos.
+- **Relevancia:** cada noticia se etiqueta con reglas de palabras clave en español e inglés:
+  - divisas: COP, USD, EUR, KRW o Mundo;
+  - temas: política monetaria, inflación, materias primas, comercio, fiscal, mercados y crecimiento.
+  Se descarta lo que no afecta a esas divisas ni al contexto global (petróleo, China, aranceles, FMI…).
+- **Sin duplicados:** la misma historia en dos medios se muestra una vez.
+- **Transparencia:** la página muestra el estado de cada fuente, cuándo se revisó y si falló. Una fuente con error conserva sus últimas noticias y se reintenta sola.
+- **Contenido:** solo titular y extracto del feed, como texto plano, con enlace al artículo original. No se guardan noticias en la base de datos ni se envían datos del usuario a los medios.
+- **Desactivar:** con `KALIGULA_NEWS=off`, Kaligula no hace ninguna petición a los medios.
+
 ### Otras funciones
 
 - **TRM oficial** en el bisel de la consola, desde datos.gov.co, con caché de 30 minutos.
@@ -203,18 +233,19 @@ La app aún no tiene cuentas de usuario: todos los datos pertenecen a un único 
 
 | Ancho | Presentación |
 |---|---|
-| < 768 px (móvil) | Consola vertical: pantalla arriba; abajo, cruceta de módulos, botones A B X Y y cuatro teclas de sistema. Tarjetas y cotizaciones en filas compactas. |
-| 768–1023 px (tableta) | La misma consola, centrada y más ancha; resumen y divisas en 3 columnas. |
+| < 1024 px (móvil y tableta) | Consola portátil clásica tipo «ladrillo»: pantalla arriba con el bisel «Dot matrix»; abajo, cruceta, A/B y Select/Start. Tarjetas y cotizaciones en filas compactas. |
 | ≥ 1024 px (escritorio) | Consola horizontal con dos controles laterales. |
 
 **Carcasa por tema:**
 
-- **Claro:** consola híbrida con controles laterales desmontables, rojo y azul neón.
-- **Oscuro:** consola de PC portátil de una sola pieza, con trackpads. El trackpad derecho desplaza la pantalla.
+| Vista | Tema claro | Tema oscuro |
+|---|---|---|
+| Móvil y tableta | Cuerpo gris con pantalla verde pálido (concepto «Dot matrix finance» de la primera versión) | La misma consola con carcasa oscura |
+| Escritorio | Consola híbrida con controles laterales desmontables, rojo y azul neón | Consola de PC portátil de una sola pieza, con trackpads (el derecho desplaza la pantalla) |
 
 Es un diseño propio, sin logotipos ni marcas de terceros.
 
-**Mapa de controles (igual en todas las vistas):**
+**Mapa de controles en escritorio:**
 
 | Control | Acción |
 |---|---|
@@ -224,6 +255,18 @@ Es un diseño propio, sin logotipos ni marcas de terceros.
 | + / Menu | Tema claro u oscuro |
 | Home / K | Inicio |
 | Captura / … | Comparar gastos |
+
+**Mapa de controles en móvil y tableta:**
+
+| Control | Acción |
+|---|---|
+| Cruceta | Igual que en escritorio |
+| A | Nuevo registro |
+| B | Metas |
+| Select | Menú: Noticias, Comparar, Metas, Categorías, Respaldo, Perfil y Tema |
+| Start | Noticias |
+
+En todas las vistas, la cabecera de la pantalla lleva a Noticias y muestra cuántas hay nuevas.
 
 Los tokens de color se definen en `apps/web/src/app/globals.css`, en las variables `:root` y `[data-theme="dark"]`. La paleta de la gráfica (violeta para ingresos, naranja para gastos) está validada para daltonismo en ambos temas.
 
@@ -290,6 +333,8 @@ Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores s
 | GET | `/api/portfolio` | Portafolio importado, valorado con precios actuales, con totales por moneda de la cuenta |
 | POST | `/api/portfolio/import` | Importar un reporte de XTB: JSON `{ fileName, contentBase64 }` con un .xlsx de máximo 10 MB |
 | DELETE | `/api/portfolio/imports/:id` | Quitar un reporte importado y sus posiciones |
+| GET | `/api/news` | Noticias relevantes (máx. 150, más recientes primero), con divisas, temas y estado de cada fuente |
+| GET | `/api/news/stream` | Las mismas noticias en vivo, por Server-Sent Events (evento `snapshot` cuando cambian) |
 
 ## Próximas fases
 
@@ -300,4 +345,4 @@ Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores s
 5. Importación de extractos bancarios.
 6. Más brókeres para el portafolio de solo consulta.
 7. Consejos (insights) basados en reglas.
-8. Noticias relacionadas con las divisas y el portafolio.
+8. Noticias del portafolio (por activo) y calendario macro: decisiones de tasas, IPC y empleo.

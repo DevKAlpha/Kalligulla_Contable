@@ -54,6 +54,19 @@
   --console-body: #25262d;
   --console-hi: #3a3b44;
   --console-lo: #16171b;
+  /* Phones and tablets, light: classic grey brick handheld. */
+  --gb-body: #d3d0c5;
+  --gb-body-hi: #ebe9e1;
+  --gb-body-lo: #aeab9f;
+  --gb-bezel: #5c5f70;
+  --gb-bezel-text: #dde0e8;
+  --gb-stripe-a: #8b2350;
+  --gb-stripe-b: #2c3b8f;
+  --gb-ink: #2c3b8f;
+  --gb-ab: #a8235e;
+  --gb-ab-hi: #c93a78;
+  --gb-pill: #8e8c86;
+  --gb-grille: #9f9c91;
 }
 
 :root[data-theme="dark"] {
@@ -104,6 +117,19 @@
   --console-body: #2b2d33;
   --console-hi: #3b3e46;
   --console-lo: #1b1c20;
+  /* Phones and tablets, dark: the same brick handheld in a dark shell. */
+  --gb-body: #27282e;
+  --gb-body-hi: #383a42;
+  --gb-body-lo: #151619;
+  --gb-bezel: #121317;
+  --gb-bezel-text: #a3a9b6;
+  --gb-stripe-a: #a3305f;
+  --gb-stripe-b: #4656b8;
+  --gb-ink: #9aa6ee;
+  --gb-ab: #b52b68;
+  --gb-ab-hi: #d0447f;
+  --gb-pill: #4a4c55;
+  --gb-grille: #141518;
 }
 
 @theme inline {
@@ -152,6 +178,9 @@
   --color-pad-button-text: var(--pad-button-text);
   --color-pad-ink: var(--pad-ink);
   --color-trackpad: var(--trackpad);
+  --color-gb-ink: var(--gb-ink);
+  --color-gb-pill: var(--gb-pill);
+  --color-gb-bezel-text: var(--gb-bezel-text);
 }
 
 @layer base {
@@ -275,7 +304,7 @@
   }
 
   /* ---------- Console hardware ----------
-     Phones/tablets: one handheld body with the control deck under the screen.
+     Phones/tablets: classic brick handheld (grey, or a dark shell in dark mode) with D-pad, A/B and Select/Start.
      Desktop light: tablet with two detachable neon controllers. Desktop dark: one-piece body with trackpads. */
   .console {
     position: relative;
@@ -284,32 +313,63 @@
     flex-direction: column;
     width: 100%;
     min-height: 0;
-    max-width: 48rem;
+    max-width: 36rem;
     margin-inline: auto;
-    padding: 8px;
+    padding: 18px 12px 8px;
     border: 3px solid var(--outline);
-    border-radius: 30px;
-    background: var(--console-body);
-    box-shadow: inset 2px 2px 0 var(--console-hi), inset -3px -3px 0 var(--console-lo), 5px 7px 0 var(--outline);
+    border-radius: 14px 14px 64px 14px;
+    background: var(--gb-body);
+    box-shadow: inset 3px 3px 0 var(--gb-body-hi), inset -4px -4px 0 var(--gb-body-lo), 5px 7px 0 var(--outline);
   }
   .console-tablet { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
+  .console-bezel { display: flex; flex: 1; flex-direction: column; min-height: 0; border: 2px solid var(--outline); }
   .console-pad { display: none; }
 
-  .deck-pad { border: 3px solid var(--outline); }
-  .deck-pad-left {
-    border-radius: 14px 14px 14px 34px;
-    background: var(--pad-left);
-    box-shadow: inset 2px 2px 0 var(--pad-left-hi), inset -3px -3px 0 var(--pad-left-lo);
+  @media (width < 64rem) {
+    /* Groove along the top edge of the brick. */
+    .console::before {
+      content: "";
+      position: absolute;
+      top: 7px;
+      left: 18px;
+      right: 18px;
+      border-top: 2px solid var(--gb-body-lo);
+      border-bottom: 1px solid var(--gb-body-hi);
+      pointer-events: none;
+    }
+    .console-bezel {
+      padding: 6px 8px 12px;
+      border-radius: 10px 10px 40px 10px;
+      background: var(--gb-bezel);
+      box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.05);
+      --bezel-text: var(--gb-bezel-text);
+    }
+    /* Pale LCD tint on the light brick. Charts keep their validated colors. */
+    :root:not([data-theme="dark"]) .console {
+      --screen: #eef1d8;
+      --surface: #f8faeb;
+      --surface-2: #e7ebd1;
+      --line: #d8dcbf;
+      --line-strong: #c2c7a4;
+    }
   }
-  .deck-pad-right {
-    border-radius: 14px 14px 34px 14px;
-    background: var(--pad-right);
-    box-shadow: inset 2px 2px 0 var(--pad-right-hi), inset -3px -3px 0 var(--pad-right-lo);
-  }
-  [data-theme="dark"] .deck-pad { border-color: transparent; background: none; box-shadow: none; }
 
-  @media (width >= 40rem) {
-    .console { padding: 12px; border-radius: 36px; }
+  /* Two printed lines on the bezel, interrupted by the model label. */
+  .gb-stripes { height: 6px; background: linear-gradient(var(--gb-stripe-a) 0 2px, transparent 2px 4px, var(--gb-stripe-b) 4px 6px); }
+  .gb-ab {
+    background: var(--gb-ab);
+    color: #fff;
+    box-shadow: inset 2px 2px 0 var(--gb-ab-hi), 0 3px 0 var(--outline);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .gb-ab:active { transform: translateY(2px); box-shadow: inset 2px 2px 0 var(--gb-ab-hi), 0 1px 0 var(--outline); }
+  .gb-grille > i {
+    display: block;
+    width: 6px;
+    height: 30px;
+    border-radius: 3px;
+    background: var(--gb-grille);
+    box-shadow: inset 1px 1px 0 rgb(0 0 0 / 0.3);
   }
 
   @media (width >= 64rem) {
@@ -324,6 +384,7 @@
       background: none;
       box-shadow: none;
     }
+    .console-bezel { padding: 10px; border-radius: 22px; background: var(--bezel); }
     .console-tablet {
       padding: 12px;
       border: 3px solid var(--outline);

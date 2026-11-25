@@ -1,8 +1,7 @@
 'use client'
 
-import {
-  ChartColumnBig, CircleDot, Copy, Ellipsis, HardDriveDownload, House, Menu, Minus, Moon, Plus, Sun, Tags, Target, UserRound,
-} from 'lucide-react'
+import { CircleDot, Copy, Ellipsis, HardDriveDownload, House, Menu, Minus, Plus, Tags, Target } from 'lucide-react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, type MouseEvent, type ReactNode } from 'react'
 import { useTheme } from '@/features/theme/theme'
@@ -15,11 +14,12 @@ import { ScreenHeader } from './screen-header'
 import { StatusStrip } from './status-strip'
 
 /*
- * Control map (same on every layout):
+ * Control map. Desktop:
  *   D-pad      ▲ Inicio  ▶ Gastos  ▼ Inversión  ◀ Préstamos
  *   A Nuevo registro · B Metas · X Categorías · Y Respaldo
  *   − / View   Perfil      + / Menu   Tema claro/oscuro
  *   Home / K   Inicio      Capture / …   Comparar gastos
+ * Phones and tablets (brick handheld): same D-pad, A Nuevo, B Metas, SELECT menú, START noticias.
  */
 
 const DIRECTIONS: Record<string, Direction> = { '/': 'up', '/gastos': 'right', '/inversiones': 'down', '/prestamos': 'left' }
@@ -113,28 +113,60 @@ function RightPad({ stick }: { stick: ReturnType<typeof useStick> }) {
   )
 }
 
-/** Phones and tablets: D-pad on the left pad, A B X Y on the right, system keys in the middle. */
-function ControlDeck({ pad }: { pad: PadItem[] }) {
-  const face = useFaceItems()
-  const themeKey = useThemeKey()
+/** Select / Start: small tilted rubber keys under the screen. */
+function PillKey({ label, title, href, onClick }: { label: string; title: string; href?: string; onClick?: () => void }) {
+  const classes = 'group flex min-h-11 min-w-10 cursor-pointer flex-col items-center justify-end gap-1.5 select-none'
+  const body = (
+    <>
+      <span aria-hidden className="block h-3 w-9 -rotate-[25deg] rounded-full border-2 border-outline bg-gb-pill shadow-[0_2px_0_var(--outline)] transition-transform duration-100 group-active:translate-y-px" />
+      <span aria-hidden className="font-mono text-[10px] font-medium tracking-[0.1em] text-gb-ink uppercase">{label}</span>
+    </>
+  )
+  return href ? (
+    <Link href={href} aria-label={title} title={title} className={classes}>{body}</Link>
+  ) : (
+    <button type="button" aria-label={title} title={title} onClick={onClick} className={classes}>{body}</button>
+  )
+}
+
+function GbButton({ letter, label, onClick, className }: { letter: string; label: string; onClick: () => void; className: string }) {
+  return (
+    <button type="button" aria-label={label} title={`${letter} · ${label}`} onClick={onClick} className={`absolute flex cursor-pointer flex-col items-center gap-1 select-none ${className}`}>
+      <span className="gb-ab grid size-12 place-items-center rounded-full border-2 border-outline font-mono text-[15px] font-medium">{letter}</span>
+      <span aria-hidden className="font-mono text-[10px] font-medium tracking-[0.1em] text-gb-ink uppercase">{label.split(' ')[0]}</span>
+    </button>
+  )
+}
+
+/**
+ * Phones and tablets: classic brick handheld. D-pad for modules, A new record, B goals,
+ * SELECT opens the menu with every other action, START opens the news.
+ */
+function BrickDeck({ pad }: { pad: PadItem[] }) {
+  const openMovement = useUiStore((state) => state.openMovement)
   const openDialog = useUiStore((state) => state.openDialog)
   const noop = () => undefined
   return (
-    <div className="mt-2 grid shrink-0 grid-cols-[1fr_auto_1fr] items-stretch gap-1.5 pb-[max(0px,env(safe-area-inset-bottom))] sm:mt-3 lg:hidden">
-      <nav aria-label="Navegación principal" className="deck-pad deck-pad-left grid place-items-center py-2">
-        <DPad items={pad} onPress={noop} size="sm" />
-      </nav>
-      <div className="grid grid-cols-2 place-content-center gap-2 px-0.5" role="group" aria-label="Sistema">
-        <SystemKey label="Editar perfil" onClick={() => openDialog('profile')} shape="chip"><UserRound aria-hidden className="size-4" /></SystemKey>
-        <SystemKey label={themeKey.label} onClick={themeKey.onClick} shape="chip">
-          <Moon aria-hidden className="size-4 dark:hidden" />
-          <Sun aria-hidden className="hidden size-4 dark:block" />
-        </SystemKey>
-        <SystemKey label="Ir al inicio" href="/" shape="chip"><House aria-hidden className="size-4" /></SystemKey>
-        <SystemKey label="Comparar gastos por mes" href={COMPARE_HREF} shape="chip"><ChartColumnBig aria-hidden className="size-4" /></SystemKey>
-      </div>
-      <div role="group" aria-label="Acciones rápidas" className="deck-pad deck-pad-right grid place-items-center py-2">
-        <FaceButtons items={face} onTilt={noop} size="sm" />
+    <div className="mt-2.5 shrink-0 px-1 pb-[max(2px,env(safe-area-inset-bottom))] lg:hidden">
+      <p aria-hidden className="mb-1.5 flex items-baseline gap-2 pl-1 text-gb-ink select-none">
+        <span className="text-[19px] leading-none font-bold tracking-[-0.02em] italic">Kaligula</span>
+        <span className="font-mono text-[10px] tracking-[0.18em] uppercase">K-1 Finance</span>
+      </p>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+        <nav aria-label="Navegación principal">
+          <DPad items={pad} onPress={noop} size="sm" variant="cross" />
+        </nav>
+        <div role="group" aria-label="Sistema" className="flex min-w-0 items-end justify-center gap-1.5 self-end">
+          <PillKey label="Select" title="Select: abrir el menú" onClick={() => openDialog('console-menu')} />
+          <PillKey label="Start" title="Start: noticias" href="/noticias" />
+        </div>
+        <div role="group" aria-label="Acciones rápidas" className="relative h-[112px] w-[112px]">
+          <GbButton letter="B" label="Metas de ahorro" onClick={() => openDialog('goals')} className="top-[40px] left-0" />
+          <GbButton letter="A" label="Nuevo registro" onClick={() => openMovement('expense')} className="top-0 right-0" />
+          <span aria-hidden className="gb-grille pointer-events-none absolute right-0 bottom-0 flex -rotate-[30deg] gap-[5px]">
+            <i /><i /><i /><i />
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -163,7 +195,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         <LeftPad pad={pad} stick={left} />
 
         <div className="console-tablet">
-          <div className="flex min-h-0 flex-1 flex-col rounded-[22px] border-2 border-outline bg-bezel p-2 sm:p-2.5">
+          <div className="console-bezel">
             <StatusStrip />
             <div className="scanlines boot-screen relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] bg-screen text-ink">
               <ScreenHeader />
@@ -175,7 +207,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         </div>
 
         <RightPad stick={right} />
-        <ControlDeck pad={pad} />
+        <BrickDeck pad={pad} />
       </div>
     </div>
   )

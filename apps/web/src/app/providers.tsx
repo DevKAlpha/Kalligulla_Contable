@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
+import { ConsoleMenuDialog } from '@/components/console/console-menu'
 import { ConsoleShell } from '@/components/console/console-shell'
 import { Toaster } from '@/components/ui/toast'
 import { BackupDialog } from '@/features/finance/components/backup-dialog'
@@ -45,6 +46,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <BackupDialog />
       <ProfileDialog />
       <PortfolioImportDialog />
+      <ConsoleMenuDialog />
       <Toaster />
     </QueryClientProvider>
   )
