@@ -1,6 +1,6 @@
 import {
   apiErrorSchema, categoryListSchema, categorySchema, comparisonSchema, fxSnapshotSchema, goalListSchema, goalSchema, healthSchema,
-  movementPageSchema, movementSchema, moversSchema, overviewSchema, profileSchema, restoreResultSchema, snapshotSchema, trmQuoteSchema,
+  movementPageSchema, movementSchema, moversSchema, overviewSchema, portfolioImportResultSchema, portfolioSchema, profileSchema, restoreResultSchema, snapshotSchema, trmQuoteSchema,
   type CategoryCreateInput, type GoalInput, type MovementInput, type MovementListQuery,
 } from '@kaligula/contracts'
 import type { AssetClass, FinanceSnapshot } from '@kaligula/domain'
@@ -86,6 +86,11 @@ export const api = {
   createGoal: (input: GoalInput) => request('/goals', { method: 'POST', body: input, schema: goalSchema }),
   updateGoal: (id: string, input: GoalInput) => request(`/goals/${id}`, { method: 'PUT', body: input, schema: goalSchema }),
   deleteGoal: (id: string) => request<void>(`/goals/${id}`, { method: 'DELETE' }),
+
+  portfolio: (signal?: AbortSignal) => request('/portfolio', { schema: portfolioSchema, signal }),
+  importPortfolio: (fileName: string, contentBase64: string) =>
+    request('/portfolio/import', { method: 'POST', body: { fileName, contentBase64 }, schema: portfolioImportResultSchema }),
+  deletePortfolioImport: (id: string) => request<void>(`/portfolio/imports/${id}`, { method: 'DELETE' }),
 
   exportBackup: () => request('/backup', { schema: snapshotSchema }) as Promise<FinanceSnapshot>,
   restoreBackup: (snapshot: FinanceSnapshot) => request('/backup/restore', { method: 'POST', body: snapshot, schema: restoreResultSchema }),

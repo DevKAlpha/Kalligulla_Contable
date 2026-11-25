@@ -10,6 +10,7 @@ export type DialogState =
   | { kind: 'categories'; type: MovementType }
   | { kind: 'backup' }
   | { kind: 'profile' }
+  | { kind: 'portfolio-import' }
   | null
 
 export interface ToastState {
@@ -24,7 +25,7 @@ interface UiStore {
   toast: ToastState | null
   openMovement(type?: MovementType, movement?: MovementDto): void
   openCategories(type?: MovementType): void
-  openDialog(kind: 'goals' | 'backup' | 'profile'): void
+  openDialog(kind: 'goals' | 'backup' | 'profile' | 'portfolio-import'): void
   closeDialog(): void
   notify(message: string, tone?: ToastState['tone'], action?: ToastState['action']): void
   dismissToast(id?: number): void

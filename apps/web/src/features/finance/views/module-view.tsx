@@ -11,6 +11,7 @@ import { ErrorState, Skeleton } from '@/components/ui/states'
 import { useUiStore } from '@/features/ui/ui-store'
 import { cn } from '@/lib/cn'
 import { TYPE_STYLE } from '@/lib/navigation'
+import { PortfolioPanel } from '@/features/portfolio/portfolio-panel'
 import { MovementList } from '../components/movement-list'
 import { PageFrame } from '../components/page-frame'
 import { useCategoriesOf, useMovementPages, useOverview, type MovementFilters } from '../queries'
@@ -159,6 +160,8 @@ export function ModuleView({ id }: { id: ModuleId }) {
           ? moduleStats(id, overview.data, latest.items[0]).map((stat) => <StatTile key={stat.label} {...stat} />)
           : [0, 1, 2].map((key) => <Skeleton key={key} className="h-[104px] rounded-2xl" />)}
       </div>
+
+      {id === 'inversiones' && <PortfolioPanel className="mt-3" />}
 
       <Panel className="mt-3" aria-labelledby={`${id}-history`}>
         <PanelHeader

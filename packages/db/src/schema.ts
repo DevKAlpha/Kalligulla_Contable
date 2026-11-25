@@ -1,4 +1,4 @@
-import { bigint, boolean, date, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, date, doublePrecision, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 /*
  * Typed view of the tables used by queries. The source of truth for DDL (constraints,
@@ -49,4 +49,34 @@ export const goals = pgTable('goals', {
   ...timestamps,
 })
 
-export const schema = { profiles, categories, movements, goals }
+/** Snapshot of a broker statement (read-only portfolio). Re-importing an account replaces its snapshot. */
+export const portfolioImports = pgTable('portfolio_imports', {
+  id: uuid('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  source: text('source').notNull(),
+  accountNumber: text('account_number'),
+  accountCurrency: text('account_currency'),
+  fileName: text('file_name').notNull(),
+  reportTime: timestamp('report_time', { withTimezone: true, mode: 'date' }),
+  importedAt: timestamp('imported_at', { withTimezone: true, mode: 'date' }).notNull(),
+  lotsCount: integer('lots_count').notNull(),
+})
+
+export const portfolioLots = pgTable('portfolio_lots', {
+  id: uuid('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  importId: uuid('import_id').notNull(),
+  externalId: text('external_id'),
+  symbol: text('symbol').notNull(),
+  name: text('name').notNull(),
+  category: text('category'),
+  side: text('side').notNull(),
+  quantity: doublePrecision('quantity').notNull(),
+  openPrice: doublePrecision('open_price').notNull(),
+  openTime: timestamp('open_time', { withTimezone: true, mode: 'date' }),
+  reportPrice: doublePrecision('report_price'),
+  reportValue: doublePrecision('report_value'),
+  reportGrossProfit: doublePrecision('report_gross_profit'),
+})
+
+export const schema = { profiles, categories, movements, goals, portfolioImports, portfolioLots }

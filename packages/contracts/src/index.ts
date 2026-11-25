@@ -289,3 +289,71 @@ export const moversSchema = z.object({
 })
 export type MoverDto = z.infer<typeof moverSchema>
 export type MoversDto = z.infer<typeof moversSchema>
+
+/* ---------- Read-only portfolio (broker statements) ---------- */
+
+/** Statement upload. The file travels base64-encoded in JSON so writes keep requiring application/json. */
+export const portfolioImportInputSchema = z.object({
+  fileName: z.string().trim().min(1).max(200),
+  contentBase64: z.string().min(1).max(14_000_000),
+})
+export const portfolioImportResultSchema = z.object({
+  importId: z.uuid(),
+  accountNumber: z.string().nullable(),
+  accountCurrency: z.string().nullable(),
+  reportTime: isoDateTime.nullable(),
+  lots: z.number().int(),
+  holdings: z.number().int(),
+  skipped: z.number().int(),
+})
+export const portfolioSchema = z.object({
+  imports: z.array(z.object({
+    id: z.uuid(),
+    source: z.literal('xtb'),
+    accountNumber: z.string().nullable(),
+    accountCurrency: z.string().nullable(),
+    fileName: z.string(),
+    reportTime: isoDateTime.nullable(),
+    importedAt: isoDateTime,
+    lots: z.number().int(),
+  })),
+  holdings: z.array(z.object({
+    key: z.string(),
+    symbol: z.string(),
+    marketSymbol: z.string().nullable(),
+    name: z.string(),
+    category: z.string().nullable(),
+    side: z.enum(['buy', 'sell']),
+    accountCurrency: z.string().nullable(),
+    quantity: z.number(),
+    avgOpenPrice: z.number(),
+    price: z.number(),
+    priceSource: z.enum(['live', 'report', 'open']),
+    priceTime: isoDateTime.nullable(),
+    value: z.number(),
+    cost: z.number(),
+    profit: z.number(),
+    profitPct: z.number().nullable(),
+    weightPct: z.number(),
+    lots: z.number().int(),
+  })),
+  totals: z.array(z.object({
+    currency: z.string().nullable(),
+    value: z.number(),
+    cost: z.number(),
+    profit: z.number(),
+    profitPct: z.number().nullable(),
+    positions: z.number().int(),
+    /** COP for one unit of the account currency, when Kaligula can convert it. */
+    copPerUnit: z.number().nullable(),
+  })),
+  prices: z.object({
+    source: z.string().nullable(),
+    realtime: z.boolean(),
+    /** Why live prices are missing, when they are. */
+    error: z.string().nullable(),
+    fetchedAt: isoDateTime,
+  }),
+})
+export type PortfolioDto = z.infer<typeof portfolioSchema>
+export type PortfolioImportResult = z.infer<typeof portfolioImportResultSchema>

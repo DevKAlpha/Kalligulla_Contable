@@ -42,6 +42,11 @@ export async function openDatabase(options: OpenDatabaseOptions = {}): Promise<D
 
   const { PGlite } = await import('@electric-sql/pglite')
   const { drizzle } = await import('drizzle-orm/pglite')
+  if (options.dataDir) {
+    // PGlite creates only the last folder of the path; a fresh checkout has no parent folder yet.
+    const { mkdir } = await import('node:fs/promises')
+    await mkdir(options.dataDir, { recursive: true })
+  }
   const client = options.dataDir ? new PGlite(options.dataDir) : new PGlite()
   await client.waitReady
   const db = drizzle(client, { schema }) as unknown as Database

@@ -9,6 +9,7 @@ import { CategoriesDialog } from '@/features/finance/components/categories-dialo
 import { GoalsDialog } from '@/features/finance/components/goals-dialog'
 import { MovementDialog } from '@/features/finance/components/movement-dialog'
 import { ProfileDialog } from '@/features/finance/components/profile-dialog'
+import { PortfolioImportDialog } from '@/features/portfolio/portfolio-import-dialog'
 import { ApiError } from '@/lib/api-client'
 
 function createQueryClient() {
@@ -43,6 +44,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <CategoriesDialog />
       <BackupDialog />
       <ProfileDialog />
+      <PortfolioImportDialog />
       <Toaster />
     </QueryClientProvider>
   )

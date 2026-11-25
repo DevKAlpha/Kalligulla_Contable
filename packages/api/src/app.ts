@@ -15,6 +15,7 @@ import type { FxProvider } from './modules/market-data/domain/fx-provider'
 import type { CryptoMarketProvider, PriceHistoryProvider } from './modules/market-data/domain/movers-providers'
 import type { TrmProvider } from './modules/market-data/domain/trm-provider'
 import { marketDataRoutes } from './modules/market-data/http/routes'
+import { createDrizzlePortfolioRepository, createPortfolioService, portfolioRoutes } from './modules/portfolio/portfolio'
 import { toErrorResponse } from './shared/errors'
 import type { AppEnv } from './shared/http'
 import { DEFAULT_ALLOWED_HOSTS, hostGuard, sameOriginWrites } from './shared/security'
@@ -37,7 +38,7 @@ export interface AppDependencies {
 }
 
 /** Routes that read or write the owner's data. */
-const OWNER_SCOPES = ['/profile', '/categories', '/movements', '/goals', '/overview', '/comparison', '/backup'] as const
+const OWNER_SCOPES = ['/profile', '/categories', '/movements', '/goals', '/overview', '/comparison', '/backup', '/portfolio'] as const
 
 /**
  * Composition root of the HTTP API. Each module receives only its dependencies,
@@ -81,6 +82,12 @@ export function createApp(deps: AppDependencies) {
   app.route('/comparison', comparisonRoutes(ledger))
   app.route('/goals', createGoalsModule(db, clock))
   app.route('/backup', createBackupModule(db, clock))
+  app.route('/portfolio', portfolioRoutes(createPortfolioService({
+    repository: createDrizzlePortfolioRepository(db),
+    prices: deps.priceHistoryProvider,
+    fxTicker,
+    clock,
+  })))
 
   app.notFound((c) => c.json({ error: { code: 'not_found', message: 'Recurso no encontrado.' } }, 404))
   app.onError((error, c) => {

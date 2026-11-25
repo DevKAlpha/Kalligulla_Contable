@@ -15,6 +15,7 @@ export const queryKeys = {
   movements: ['movements'] as const,
   overview: ['overview'] as const,
   comparison: ['comparison'] as const,
+  portfolio: ['portfolio'] as const,
   goals: ['goals'] as const,
   health: ['health'] as const,
 }
@@ -69,6 +70,27 @@ export function useComparison(base: string, target: string) {
     queryKey: [...queryKeys.comparison, base, target],
     queryFn: ({ signal }) => api.comparison(base, target, signal),
     placeholderData: keepPreviousData,
+  })
+}
+
+/** Read-only portfolio imported from broker statements, valued with live prices (refreshed every minute). */
+export function usePortfolio() {
+  return useQuery({ queryKey: queryKeys.portfolio, queryFn: ({ signal }) => api.portfolio(signal), refetchInterval: 60_000 })
+}
+
+export function useImportPortfolio() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ fileName, contentBase64 }: { fileName: string; contentBase64: string }) => api.importPortfolio(fileName, contentBase64),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.portfolio }),
+  })
+}
+
+export function useDeletePortfolioImport() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deletePortfolioImport(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.portfolio }),
   })
 }
 

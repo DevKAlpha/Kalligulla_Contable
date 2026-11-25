@@ -15,7 +15,7 @@ describe('database', () => {
   })
 
   it('applies migrations once and is idempotent', async () => {
-    expect(await migrate(handle.db)).toEqual(['0001_ledger'])
+    expect(await migrate(handle.db)).toEqual(['0001_ledger', '0002_portfolio'])
     expect(await migrate(handle.db)).toEqual([])
     expect(await handle.ping()).toBe(true)
     expect(handle.engine).toBe('pglite')
