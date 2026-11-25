@@ -1,10 +1,7 @@
 'use client'
 
 import { initials } from '@kaligula/domain'
-import { HardDriveDownload, Moon, Sun, Target } from 'lucide-react'
-import { IconButton } from '@/components/ui/button'
 import { useProfile } from '@/features/finance/queries'
-import { useTheme } from '@/features/theme/theme'
 import { useUiStore } from '@/features/ui/ui-store'
 
 export function ScreenHeader() {
@@ -12,7 +9,6 @@ export function ScreenHeader() {
   const name = profile.data?.name ?? ''
   const ready = profile.isSuccess
   const openDialog = useUiStore((state) => state.openDialog)
-  const { theme, toggle } = useTheme()
 
   return (
     <header className="relative z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-screen/95 px-4 backdrop-blur sm:px-6">
@@ -31,18 +27,8 @@ export function ScreenHeader() {
         </span>
       </button>
 
-      {/* On large screens these actions live on the right rail of the console. */}
-      <div className="flex items-center gap-2 lg:hidden">
-        <IconButton label="Metas de ahorro" onClick={() => openDialog('goals')}>
-          <Target size={18} aria-hidden />
-        </IconButton>
-        <IconButton label="Respaldo CSV" onClick={() => openDialog('backup')}>
-          <HardDriveDownload size={18} aria-hidden />
-        </IconButton>
-        <IconButton label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'} onClick={toggle}>
-          {theme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
-        </IconButton>
-      </div>
+      {/* Actions live on the console controls: A B X Y and the system keys. */}
+      <span aria-hidden className="hidden font-mono text-[11px] tracking-[0.14em] text-muted uppercase sm:block">Kaligula</span>
     </header>
   )
 }

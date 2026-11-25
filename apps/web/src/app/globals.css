@@ -39,6 +39,21 @@
   --negative: #b8432a;
   --focus: #6b5ce7;
   --key-shadow: 0 4px 0 var(--outline);
+  /* Console hardware, light: hybrid handheld with neon side controllers. */
+  --pad-left: #ff5a4f;
+  --pad-left-hi: #ff8a80;
+  --pad-left-lo: #d23a31;
+  --pad-right: #1cb9e6;
+  --pad-right-hi: #6ad6f3;
+  --pad-right-lo: #0d91b9;
+  --pad-button: #24262c;
+  --pad-button-hi: #3b3e46;
+  --pad-button-text: #f4f4f5;
+  --pad-ink: #15161c;
+  --trackpad: #23252a;
+  --console-body: #25262d;
+  --console-hi: #3a3b44;
+  --console-lo: #16171b;
 }
 
 :root[data-theme="dark"] {
@@ -74,6 +89,21 @@
   --cmp-base: #5f8fd8;
   --negative: #ff8a6b;
   --focus: #b3a9ff;
+  /* Console hardware, dark: one-piece PC handheld with trackpads. */
+  --pad-left: #2b2d33;
+  --pad-left-hi: #3a3c44;
+  --pad-left-lo: #1b1c20;
+  --pad-right: #2b2d33;
+  --pad-right-hi: #3a3c44;
+  --pad-right-lo: #1b1c20;
+  --pad-button: #42454e;
+  --pad-button-hi: #535762;
+  --pad-button-text: #e7e8eb;
+  --pad-ink: #d9dbe0;
+  --trackpad: #212328;
+  --console-body: #2b2d33;
+  --console-hi: #3b3e46;
+  --console-lo: #1b1c20;
 }
 
 @theme inline {
@@ -111,6 +141,17 @@
   --color-cmp-target: var(--expense);
   --color-negative: var(--negative);
   --color-focus: var(--focus);
+  --color-pad-left: var(--pad-left);
+  --color-pad-left-hi: var(--pad-left-hi);
+  --color-pad-left-lo: var(--pad-left-lo);
+  --color-pad-right: var(--pad-right);
+  --color-pad-right-hi: var(--pad-right-hi);
+  --color-pad-right-lo: var(--pad-right-lo);
+  --color-pad-button: var(--pad-button);
+  --color-pad-button-hi: var(--pad-button-hi);
+  --color-pad-button-text: var(--pad-button-text);
+  --color-pad-ink: var(--pad-ink);
+  --color-trackpad: var(--trackpad);
 }
 
 @layer base {
@@ -176,6 +217,187 @@
   }
 }
 
+/* ---------- Motion (transform/opacity only; all disabled under prefers-reduced-motion) ---------- */
+
+@layer components {
+  /* First paint of a session only ([data-boot] is set by the inline script): the screen powers on
+     and the side controllers click into place. */
+  [data-boot] .boot-screen { animation: power-on 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: center; }
+  [data-boot] .boot-left { animation: attach-left 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.2) 0.1s both; }
+  [data-boot] .boot-right { animation: attach-right 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.2) 0.1s both; }
+
+  /* Page sections rise one after another. */
+  .stagger > * { animation: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .stagger > :nth-child(2) { animation-delay: 50ms; }
+  .stagger > :nth-child(3) { animation-delay: 100ms; }
+  .stagger > :nth-child(4) { animation-delay: 150ms; }
+  .stagger > :nth-child(5) { animation-delay: 200ms; }
+  .stagger > :nth-child(6) { animation-delay: 250ms; }
+  .stagger > :nth-child(n + 7) { animation-delay: 300ms; }
+
+  /* Chart marks grow from their baseline; line charts are revealed left to right. */
+  .grow-y { transform-origin: bottom; animation: grow-y 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .grow-x { transform-origin: left; animation: grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .reveal-x { animation: reveal-x 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+  dialog[open] { animation: dialog-pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  dialog[open]::backdrop { animation: fade-in 0.2s ease-out both; }
+
+  /* Skeleton loading: a light sweep moved with transform, cheaper than animating backgrounds. */
+  .shimmer { position: relative; overflow: hidden; }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.3s ease-in-out infinite;
+  }
+  [data-theme="dark"] .shimmer::after { background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent); }
+
+  /* Analog sticks lean towards the direction just pressed. */
+  .stick { transition: transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .stick[data-tilt="up"] { transform: translateY(-5px) rotateX(16deg); }
+  .stick[data-tilt="down"] { transform: translateY(5px) rotateX(-16deg); }
+  .stick[data-tilt="left"] { transform: translateX(-5px) rotateY(-16deg); }
+  .stick[data-tilt="right"] { transform: translateX(5px) rotateY(16deg); }
+  .stick[data-tilt="press"] { transform: scale(0.92); }
+
+  /* Trackpad glow follows the pointer (CSS variables set from one rAF per frame). */
+  .trackpad {
+    background-color: var(--trackpad);
+    background-image:
+      radial-gradient(circle at var(--px, 50%) var(--py, 50%), rgb(198 240 90 / var(--glow, 0)) 0, transparent 55%),
+      repeating-linear-gradient(0deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 6px);
+    transition: --glow 0.3s;
+    touch-action: none;
+  }
+
+  /* ---------- Console hardware ----------
+     Phones/tablets: one handheld body with the control deck under the screen.
+     Desktop light: tablet with two detachable neon controllers. Desktop dark: one-piece body with trackpads. */
+  .console {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    max-width: 48rem;
+    margin-inline: auto;
+    padding: 8px;
+    border: 3px solid var(--outline);
+    border-radius: 30px;
+    background: var(--console-body);
+    box-shadow: inset 2px 2px 0 var(--console-hi), inset -3px -3px 0 var(--console-lo), 5px 7px 0 var(--outline);
+  }
+  .console-tablet { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; }
+  .console-pad { display: none; }
+
+  .deck-pad { border: 3px solid var(--outline); }
+  .deck-pad-left {
+    border-radius: 14px 14px 14px 34px;
+    background: var(--pad-left);
+    box-shadow: inset 2px 2px 0 var(--pad-left-hi), inset -3px -3px 0 var(--pad-left-lo);
+  }
+  .deck-pad-right {
+    border-radius: 14px 14px 34px 14px;
+    background: var(--pad-right);
+    box-shadow: inset 2px 2px 0 var(--pad-right-hi), inset -3px -3px 0 var(--pad-right-lo);
+  }
+  [data-theme="dark"] .deck-pad { border-color: transparent; background: none; box-shadow: none; }
+
+  @media (width >= 40rem) {
+    .console { padding: 12px; border-radius: 36px; }
+  }
+
+  @media (width >= 64rem) {
+    .console {
+      display: grid;
+      grid-template-columns: 176px minmax(0, 1fr) 176px;
+      gap: 5px;
+      max-width: 1680px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+    }
+    .console-tablet {
+      padding: 12px;
+      border: 3px solid var(--outline);
+      border-radius: 22px;
+      background: var(--console-body);
+      box-shadow: inset 2px 2px 0 var(--console-hi), inset -3px -3px 0 var(--console-lo), 6px 8px 0 var(--outline);
+    }
+    .console-pad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      min-height: 0;
+      padding: 22px 14px;
+      border: 3px solid var(--outline);
+    }
+    .console-pad-left {
+      border-radius: 88px 18px 18px 88px;
+      background: var(--pad-left);
+      box-shadow: inset 3px 3px 0 var(--pad-left-hi), inset -4px -4px 0 var(--pad-left-lo), 6px 8px 0 var(--outline);
+    }
+    .console-pad-right {
+      border-radius: 18px 88px 88px 18px;
+      background: var(--pad-right);
+      box-shadow: inset 3px 3px 0 var(--pad-right-hi), inset -4px -4px 0 var(--pad-right-lo), 6px 8px 0 var(--outline);
+    }
+
+    [data-theme="dark"] .console {
+      gap: 4px;
+      padding: 12px 8px;
+      border: 3px solid var(--outline);
+      border-radius: 96px;
+      background: var(--console-body);
+      box-shadow: inset 3px 3px 0 var(--console-hi), inset -4px -4px 0 var(--console-lo), 6px 8px 0 var(--outline);
+    }
+    [data-theme="dark"] .console-tablet,
+    [data-theme="dark"] .console-pad { border-color: transparent; background: none; box-shadow: none; }
+  }
+}
+
+/* Registered so the trackpad glow can transition smoothly. */
+@property --glow {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Theme change: the new console is revealed from the button that was pressed (View Transitions API). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) { animation: theme-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@keyframes power-on {
+  0% { opacity: 0; transform: scale(0.4, 0.006); }
+  45% { opacity: 1; transform: scale(1, 0.006); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes attach-left { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+@keyframes attach-right { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes reveal-x { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-pop { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { to { transform: translateX(100%); } }
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to { clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
@@ -187,6 +409,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) { animation: none; }
+  .shimmer::after { display: none; }
+
   *,
   *::before,
   *::after {

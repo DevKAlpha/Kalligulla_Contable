@@ -1,12 +1,9 @@
 'use client'
 
 import { useCallback, useSyncExternalStore } from 'react'
+import { THEME_STORAGE_KEY } from './init-scripts'
 
 export type ThemePreference = 'light' | 'dark' | 'system'
-export const THEME_STORAGE_KEY = 'kaligula.theme'
-
-/** Runs inline in <head> before paint to avoid a flash of the wrong theme. Keep it dependency-free. */
-export const THEME_INIT_SCRIPT = `(function(){try{var p=localStorage.getItem('${THEME_STORAGE_KEY}');var d=p==='dark'||((!p||p==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})()`
 
 function readPreference(): ThemePreference {
   try {
@@ -59,7 +56,15 @@ export function useTheme() {
     apply(preference)
   }, [])
 
-  const toggle = useCallback(() => setPreference(theme === 'dark' ? 'light' : 'dark'), [setPreference, theme])
+  /** Switches theme; with an origin point, the new console is revealed in a circle from there (View Transitions API). */
+  const toggle = useCallback((origin?: { x: number; y: number }) => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    const doc = document as Document & { startViewTransition?: (update: () => void) => unknown }
+    if (!origin || !doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return setPreference(next)
+    document.documentElement.style.setProperty('--vt-x', `${origin.x}px`)
+    document.documentElement.style.setProperty('--vt-y', `${origin.y}px`)
+    doc.startViewTransition(() => setPreference(next))
+  }, [setPreference, theme])
 
   return { theme, setPreference, toggle }
 }

@@ -13,12 +13,13 @@ function monthDate(key: string) {
   return new Date(year, month - 1, 1)
 }
 
-function Bar({ value, max, className }: { value: number; max: number; className: string }) {
+function Bar({ value, max, delay, className }: { value: number; max: number; delay: number; className: string }) {
   const height = value > 0 ? Math.max(2, (value / max) * 100) : 0
-  return <span className={cn('block w-[min(16px,38%)] rounded-t-[4px] transition-[height] duration-500', className)} style={{ height: `${height}%` }} />
+  // Grows with transform (no layout work); bars enter one month after another.
+  return <span className={cn('grow-y block w-[min(16px,38%)] rounded-t-[4px]', className)} style={{ height: `${height}%`, animationDelay: `${delay}ms` }} />
 }
 
-function MonthColumn({ month, max, align }: { month: CashFlowMonth; max: number; align: 'start' | 'end' }) {
+function MonthColumn({ month, max, align, index }: { month: CashFlowMonth; max: number; align: 'start' | 'end'; index: number }) {
   const label = monthLong.format(monthDate(month.key))
   return (
     <div
@@ -26,8 +27,8 @@ function MonthColumn({ month, max, align }: { month: CashFlowMonth; max: number;
       aria-label={`${label}: ingresos ${formatMoney(month.incomeMinor)}, gastos ${formatMoney(month.expenseMinor)}`}
       className="group relative flex h-full min-w-0 cursor-default items-end justify-center gap-[2px] rounded-md outline-none hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus"
     >
-      <Bar value={month.incomeMinor} max={max} className="bg-income" />
-      <Bar value={month.expenseMinor} max={max} className="bg-expense" />
+      <Bar value={month.incomeMinor} max={max} delay={index * 60} className="bg-income" />
+      <Bar value={month.expenseMinor} max={max} delay={index * 60 + 30} className="bg-expense" />
       <div
         role="tooltip"
         className={cn(
@@ -84,7 +85,7 @@ export function CashFlowChart({ flow, className }: { flow: readonly CashFlowMont
             )}
             <div className="relative grid h-full grid-cols-6 gap-1 sm:gap-2">
               {flow.map((month, index) => (
-                <MonthColumn key={month.key} month={month} max={max} align={index < flow.length / 2 ? 'start' : 'end'} />
+                <MonthColumn key={month.key} month={month} max={max} index={index} align={index < flow.length / 2 ? 'start' : 'end'} />
               ))}
             </div>
           </div>

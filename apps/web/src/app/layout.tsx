@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { DM_Mono, Space_Grotesk } from 'next/font/google'
 import type { ReactNode } from 'react'
-import { THEME_INIT_SCRIPT } from '@/features/theme/theme'
+import { BOOT_INIT_SCRIPT, THEME_INIT_SCRIPT } from '@/features/theme/init-scripts'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es-CO" suppressHydrationWarning className={`${spaceGrotesk.variable} ${dmMono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: `${THEME_INIT_SCRIPT};${BOOT_INIT_SCRIPT}` }} />
       </head>
       <body>
         <a href="#contenido" className="sr-only z-50 rounded-lg bg-accent px-3 py-2 font-semibold text-on-accent focus:not-sr-only focus:fixed focus:top-3 focus:left-3">

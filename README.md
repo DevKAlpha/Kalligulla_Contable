@@ -144,11 +144,39 @@ Cómo activarlo (son llaves de solo lectura de datos; no hace falta depositar di
 
 Sin llaves, Kaligula usa como respaldo el endpoint público de gráficos de Yahoo Finance. **No es una API oficial y puede tener retraso**, y la tarjeta lo indica con un aviso. Las fuentes están detrás de un puerto (`PriceHistoryProvider`), así que se pueden cambiar sin tocar la interfaz. CoinGecko sí es una API oficial (requiere atribución, que se muestra en pantalla).
 
+### Portafolio XTB (solo consulta, en Inversiones)
+
+XTB cerró su API pública el 14 de marzo de 2025, así que Kaligula no se conecta a la cuenta: lee el reporte que exporta xStation 5.
+
+1. En xStation 5, abre **Historial de la cuenta** (*Account History*), elige un rango que llegue hasta hoy y pulsa **Exportar** en formato **Excel (.xlsx)**.
+2. En Kaligula, ve a **Inversiones → Importar reporte de XTB** y elige el archivo.
+
+Kaligula lee la hoja de posiciones abiertas (encabezados en inglés o en español) y muestra:
+
+- valor actual, capital invertido y ganancia o pérdida sin realizar, con su equivalente en pesos usando la cotización del dólar o del euro;
+- cada activo con su peso en el portafolio.
+
+**Precios:**
+
+- Acciones y ETF de EE. UU. (`.US`): se valoran con el precio actual de la fuente configurada (Alpaca en vivo, o Yahoo como respaldo).
+- Otros mercados: usan el precio del reporte.
+
+**Reglas:**
+
+- **Solo lectura:** no hay ningún endpoint que opere, modifique posiciones ni mueva dinero.
+- **Reemplazo por cuenta:** importar de nuevo la misma cuenta reemplaza su foto anterior; otras cuentas se conservan.
+- **Procesamiento local:** el archivo se lee en el propio servidor de Kaligula, sin librerías externas.
+- **Límites:** máximo 10 MB, con tope de tamaño descomprimido contra archivos maliciosos.
+
 ### Otras funciones
 
 - **TRM oficial** en el bisel de la consola, desde datos.gov.co, con caché de 30 minutos.
 - **Estado de la base de datos** en el bisel: «BD local» (PGlite), «PostgreSQL» o «BD sin conexión».
-- **Tema claro, oscuro o del sistema**, sin parpadeo al cargar.
+- **Tema claro, oscuro o del sistema**, sin parpadeo al cargar. Al cambiarlo, el nuevo tema se revela en círculo desde la tecla pulsada (View Transitions).
+- **Animaciones optimizadas:** encendido de pantalla una vez por sesión, entrada escalonada de secciones, números que cuentan hasta su valor, barras que crecen y líneas que se revelan, palancas que se inclinan al pulsar, diálogos y *skeletons* con brillo.
+  - Solo animan `transform` y `opacity`, o un recorte único en las gráficas de línea.
+  - Los números se escriben fuera del ciclo de render de React.
+  - Con «reducir movimiento» activado en el sistema, todo se desactiva.
 
 ## Dónde se guardan los datos
 
@@ -175,9 +203,27 @@ La app aún no tiene cuentas de usuario: todos los datos pertenecen a un único 
 
 | Ancho | Presentación |
 |---|---|
-| < 768 px (móvil) | Consola vertical: pantalla arriba y deck inferior con las 4 teclas de módulo y la tecla «+» central. Tarjetas y cotizaciones en filas compactas. |
+| < 768 px (móvil) | Consola vertical: pantalla arriba; abajo, cruceta de módulos, botones A B X Y y cuatro teclas de sistema. Tarjetas y cotizaciones en filas compactas. |
 | 768–1023 px (tableta) | La misma consola, centrada y más ancha; resumen y divisas en 3 columnas. |
-| ≥ 1024 px (escritorio) | Consola horizontal: riel izquierdo con los módulos, pantalla central y riel derecho con Nuevo, Metas, Categorías, Respaldo y Tema. |
+| ≥ 1024 px (escritorio) | Consola horizontal con dos controles laterales. |
+
+**Carcasa por tema:**
+
+- **Claro:** consola híbrida con controles laterales desmontables, rojo y azul neón.
+- **Oscuro:** consola de PC portátil de una sola pieza, con trackpads. El trackpad derecho desplaza la pantalla.
+
+Es un diseño propio, sin logotipos ni marcas de terceros.
+
+**Mapa de controles (igual en todas las vistas):**
+
+| Control | Acción |
+|---|---|
+| Cruceta | ▲ Inicio · ▶ Gastos · ▼ Inversiones · ◀ Préstamos |
+| A · B · X · Y | Nuevo registro · Metas · Categorías · Respaldo |
+| − / View | Perfil |
+| + / Menu | Tema claro u oscuro |
+| Home / K | Inicio |
+| Captura / … | Comparar gastos |
 
 Los tokens de color se definen en `apps/web/src/app/globals.css`, en las variables `:root` y `[data-theme="dark"]`. La paleta de la gráfica (violeta para ingresos, naranja para gastos) está validada para daltonismo en ambos temas.
 
@@ -241,6 +287,9 @@ Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores s
 | GET | `/api/market/fx` | USD, EUR y KRW en COP |
 | GET | `/api/market/movers?class=stocks\|etfs\|crypto` | Mejores rendimientos de 30 días por nicho (`503` si la fuente no responde y no hay caché) |
 | GET | `/api/market/fx/stream` | Las mismas cotizaciones en vivo, por Server-Sent Events (evento `snapshot`) |
+| GET | `/api/portfolio` | Portafolio importado, valorado con precios actuales, con totales por moneda de la cuenta |
+| POST | `/api/portfolio/import` | Importar un reporte de XTB: JSON `{ fileName, contentBase64 }` con un .xlsx de máximo 10 MB |
+| DELETE | `/api/portfolio/imports/:id` | Quitar un reporte importado y sus posiciones |
 
 ## Próximas fases
 
@@ -249,6 +298,6 @@ Todas las respuestas son JSON validadas con `@kaligula/contracts`. Los errores s
 3. Presupuestos por categoría.
 4. Movimientos en varias monedas, usando la TRM de la fecha de cada uno.
 5. Importación de extractos bancarios.
-6. Portafolio con precios en vivo.
+6. Más brókeres para el portafolio de solo consulta.
 7. Consejos (insights) basados en reglas.
 8. Noticias relacionadas con las divisas y el portafolio.

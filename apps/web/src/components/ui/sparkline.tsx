@@ -9,7 +9,7 @@ export function Sparkline({ values, className }: { values: readonly number[]; cl
   const points = values.map((value, index) => `${(index / (values.length - 1)) * 100},${100 - ((value - min) / span) * 100}`).join(' ')
   const lastY = 100 - ((values[values.length - 1] - min) / span) * 100
   return (
-    <svg viewBox="-4 -8 108 116" preserveAspectRatio="none" aria-hidden className={cn('h-7 w-20 overflow-visible', className)}>
+    <svg viewBox="-4 -8 108 116" preserveAspectRatio="none" aria-hidden className={cn('reveal-x h-7 w-20 overflow-visible', className)}>
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       <circle cx={100} cy={lastY} r={3.5} fill="currentColor" vectorEffect="non-scaling-stroke" />
     </svg>

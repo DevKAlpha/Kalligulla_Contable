@@ -75,8 +75,8 @@ export function CategoryComparison({ rows, baseLabel, targetLabel }: { rows: rea
               <SpendDelta deltaMinor={row.deltaMinor} deltaPct={row.deltaPct} isNew={row.baseMinor === 0 && row.targetMinor > 0} />
             </div>
             <div aria-hidden className="grid gap-[2px]">
-              <span className="block h-2.5 rounded-r-[4px] bg-cmp-base" style={{ width: width(row.baseMinor) }} />
-              <span className="block h-2.5 rounded-r-[4px] bg-cmp-target" style={{ width: width(row.targetMinor) }} />
+              <span className="grow-x block h-2.5 rounded-r-[4px] bg-cmp-base" style={{ width: width(row.baseMinor) }} />
+              <span className="grow-x block h-2.5 rounded-r-[4px] bg-cmp-target" style={{ width: width(row.targetMinor) }} />
             </div>
             <div className="flex justify-between gap-2 text-[12px] text-muted tabular-nums">
               <span>{baseLabel}: {formatMoney(row.baseMinor)}</span>

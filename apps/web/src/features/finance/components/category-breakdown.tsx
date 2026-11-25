@@ -45,7 +45,7 @@ export function CategoryBreakdown({ breakdown, className }: { breakdown: readonl
                 </span>
               </div>
               <div className="h-2 rounded-full bg-surface-2">
-                <span className="block h-full rounded-full bg-expense" style={{ width: `${Math.max(3, (row.amountMinor / top) * 100)}%` }} />
+                <span className="grow-x block h-full rounded-full bg-expense" style={{ width: `${Math.max(3, (row.amountMinor / top) * 100)}%` }} />
               </div>
             </li>
           ))}

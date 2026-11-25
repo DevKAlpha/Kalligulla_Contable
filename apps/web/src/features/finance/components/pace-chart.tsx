@@ -88,7 +88,7 @@ export function PaceChart({ base, target, compareDay }: PaceChartProps) {
             {ticks.map((tick) => <span key={tick} className="block border-t border-dashed border-line last:border-solid last:border-line-strong" />)}
           </div>
 
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden className="absolute inset-0 h-full w-full overflow-visible">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden className="reveal-x absolute inset-0 h-full w-full overflow-visible">
             {base.values.length > 0 && (
               <path d={path(base.values)} fill="none" stroke="var(--cmp-base)" strokeWidth={2} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
             )}

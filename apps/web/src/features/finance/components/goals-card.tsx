@@ -24,7 +24,7 @@ export function GoalProgressBar({ pct, label }: { pct: number; label: string }) 
       aria-label={label}
       className="h-4 rounded-md border-2 border-outline bg-surface p-[2px]"
     >
-      <span className="pixel-progress block h-full text-loan transition-[width] duration-500" style={{ width: `${pct}%` }} />
+      <span className="pixel-progress grow-x block h-full text-loan" style={{ width: `${pct}%` }} />
     </div>
   )
 }
