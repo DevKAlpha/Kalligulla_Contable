@@ -115,10 +115,10 @@ function RightPad({ stick }: { stick: ReturnType<typeof useStick> }) {
 
 /** Select / Start: small tilted rubber keys under the screen. */
 function PillKey({ label, title, href, onClick }: { label: string; title: string; href?: string; onClick?: () => void }) {
-  const classes = 'group flex min-h-11 min-w-10 cursor-pointer flex-col items-center justify-end gap-1.5 select-none'
+  const classes = 'group flex min-h-11 min-w-10 cursor-pointer flex-col items-center justify-end gap-1.5 select-none max-[359px]:min-w-9'
   const body = (
     <>
-      <span aria-hidden className="block h-3 w-9 -rotate-[25deg] rounded-full border-2 border-outline bg-gb-pill shadow-[0_2px_0_var(--outline)] transition-transform duration-100 group-active:translate-y-px" />
+      <span aria-hidden className="block h-3 w-9 -rotate-[25deg] max-[359px]:w-8 rounded-full border-2 border-outline bg-gb-pill shadow-[0_2px_0_var(--outline)] transition-transform duration-100 group-active:translate-y-px" />
       <span aria-hidden className="font-mono text-[10px] font-medium tracking-[0.1em] text-gb-ink uppercase">{label}</span>
     </>
   )
@@ -132,7 +132,7 @@ function PillKey({ label, title, href, onClick }: { label: string; title: string
 function GbButton({ letter, label, onClick, className }: { letter: string; label: string; onClick: () => void; className: string }) {
   return (
     <button type="button" aria-label={label} title={`${letter} · ${label}`} onClick={onClick} className={`absolute flex cursor-pointer flex-col items-center gap-1 select-none ${className}`}>
-      <span className="gb-ab grid size-12 place-items-center rounded-full border-2 border-outline font-mono text-[15px] font-medium">{letter}</span>
+      <span className="gb-ab grid size-12 place-items-center rounded-full max-[359px]:size-10 border-2 border-outline font-mono text-[15px] font-medium">{letter}</span>
       <span aria-hidden className="font-mono text-[10px] font-medium tracking-[0.1em] text-gb-ink uppercase">{label.split(' ')[0]}</span>
     </button>
   )
@@ -160,8 +160,8 @@ function BrickDeck({ pad }: { pad: PadItem[] }) {
           <PillKey label="Select" title="Select: abrir el menú" onClick={() => openDialog('console-menu')} />
           <PillKey label="Start" title="Start: noticias" href="/noticias" />
         </div>
-        <div role="group" aria-label="Acciones rápidas" className="relative h-[112px] w-[112px]">
-          <GbButton letter="B" label="Metas de ahorro" onClick={() => openDialog('goals')} className="top-[40px] left-0" />
+        <div role="group" aria-label="Acciones rápidas" className="relative h-[112px] w-[112px] max-[359px]:h-[100px] max-[359px]:w-[96px]">
+          <GbButton letter="B" label="Metas de ahorro" onClick={() => openDialog('goals')} className="top-[40px] left-0 max-[359px]:top-[36px]" />
           <GbButton letter="A" label="Nuevo registro" onClick={() => openMovement('expense')} className="top-0 right-0" />
           <span aria-hidden className="gb-grille pointer-events-none absolute right-0 bottom-0 flex -rotate-[30deg] gap-[5px]">
             <i /><i /><i /><i />

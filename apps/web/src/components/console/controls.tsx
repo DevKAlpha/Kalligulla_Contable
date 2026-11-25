@@ -82,7 +82,7 @@ export function DPad({ items, onPress, size = 'lg', variant = 'theme' }: {
 }) {
   const cross = variant === 'cross'
   return (
-    <div className={cn('grid shrink-0 grid-cols-3 grid-rows-3', size === 'lg' ? 'size-[132px]' : 'size-[102px]')}>
+    <div className={cn('grid shrink-0 grid-cols-3 grid-rows-3', size === 'lg' ? 'size-[132px]' : 'size-[102px] max-[359px]:size-[90px]')}>
       {items.map((item) => (
         <Link
           key={item.href}

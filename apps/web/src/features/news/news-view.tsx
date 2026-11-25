@@ -16,7 +16,7 @@ import { useNews, useNewsSeen } from './use-news'
 type Filter = 'all' | NewsCurrencyCode | 'global'
 
 const PAGE = 20
-const rate = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 2 })
+const rate = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const percent = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 function matches(item: NewsItem, filter: Filter, topic: NewsTopic | 'all') {

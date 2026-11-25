@@ -326,6 +326,9 @@
   .console-pad { display: none; }
 
   @media (width < 64rem) {
+    @media (width < 360px) {
+      .console { padding-inline: 8px; }
+    }
     /* Groove along the top edge of the brick. */
     .console::before {
       content: "";

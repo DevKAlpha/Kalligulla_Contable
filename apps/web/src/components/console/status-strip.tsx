@@ -56,7 +56,7 @@ export function StatusStrip({ className }: { className?: string }) {
     <div className={cn('flex items-center justify-between gap-3 px-2 pt-0.5 pb-2 font-mono text-[11px] tracking-[0.08em] text-bezel-text uppercase', className)}>
       <div className="flex min-w-0 items-center gap-2">
         <span aria-hidden className="size-2 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
-        <span className="whitespace-nowrap lg:hidden">Dot matrix</span>
+        <span className="whitespace-nowrap max-[359px]:hidden lg:hidden">Dot matrix</span>
         <span className="truncate max-lg:hidden">Kaligula K-1</span>
         <span className="hidden text-bezel-text/60 lg:inline">· Finance terminal</span>
       </div>
