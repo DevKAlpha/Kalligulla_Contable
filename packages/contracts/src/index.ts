@@ -1,4 +1,4 @@
-import { ASSET_CLASSES, FX_CODES, isMonthKey, MOVEMENT_TYPES } from '@kaligula/domain'
+import { ASSET_CLASSES, FX_CODES, isMonthKey, MOVEMENT_TYPES, NEWS_CURRENCIES, NEWS_TOPICS } from '@kaligula/domain'
 import { z } from 'zod'
 
 /*
@@ -357,3 +357,47 @@ export const portfolioSchema = z.object({
 })
 export type PortfolioDto = z.infer<typeof portfolioSchema>
 export type PortfolioImportResult = z.infer<typeof portfolioImportResultSchema>
+
+/* ---------- Global news that moves COP, USD, EUR and KRW ---------- */
+
+export const newsCurrencySchema = z.enum(NEWS_CURRENCIES)
+export const newsTopicSchema = z.enum(NEWS_TOPICS)
+export const newsItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  /** Plain-text excerpt provided by the feed (never HTML). */
+  summary: z.string(),
+  url: z.url(),
+  sourceId: z.string(),
+  publishedAt: isoDateTime,
+  /** False when the feed gave no date and `publishedAt` is when Kaligula first saw the story. */
+  dated: z.boolean(),
+  currencies: z.array(newsCurrencySchema),
+  topics: z.array(newsTopicSchema),
+  /** World context (oil, China, tariffs, IMF…) that moves every currency. */
+  global: z.boolean(),
+})
+export const newsSourceStatusSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  homepage: z.url(),
+  lang: z.enum(['es', 'en']),
+  official: z.boolean(),
+  currencies: z.array(newsCurrencySchema),
+  status: z.enum(['ok', 'error', 'pending']),
+  checkedAt: isoDateTime.nullable(),
+  error: z.string().nullable(),
+  items: z.number().int(),
+})
+export const newsSnapshotSchema = z.object({
+  items: z.array(newsItemSchema),
+  sources: z.array(newsSourceStatusSchema),
+  /** When the snapshot last changed or a source was last checked. */
+  updatedAt: isoDateTime,
+  /** Fastest source refresh interval, for "updates every N minutes". */
+  refreshMs: z.number().int(),
+})
+export type NewsCurrencyCode = z.infer<typeof newsCurrencySchema>
+export type NewsItem = z.infer<typeof newsItemSchema>
+export type NewsSourceStatus = z.infer<typeof newsSourceStatusSchema>
+export type NewsSnapshot = z.infer<typeof newsSnapshotSchema>

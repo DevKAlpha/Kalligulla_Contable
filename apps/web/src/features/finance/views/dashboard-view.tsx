@@ -7,6 +7,7 @@ import { Eyebrow, Panel, PanelHeader } from '@/components/ui/panel'
 import { ErrorState, Skeleton } from '@/components/ui/states'
 import { FxBoard } from '@/features/market/fx-board'
 import { MarketMovers } from '@/features/market/market-movers'
+import { NewsPanel } from '@/features/news/news-panel'
 import { useUiStore } from '@/features/ui/ui-store'
 import { CashFlowChart } from '../components/cash-flow-chart'
 import { CategoryBreakdown } from '../components/category-breakdown'
@@ -72,6 +73,8 @@ export function DashboardView() {
       ) : (
         <SummaryCards overview={overview.data} />
       )}
+
+      <NewsPanel className="mt-3" />
 
       <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="grid min-w-0 content-start gap-3">

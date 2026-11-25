@@ -6,6 +6,7 @@ import { createDatosGovTrmProvider } from './modules/market-data/infrastructure/
 import type { PriceHistoryProvider } from './modules/market-data/domain/movers-providers'
 import { createAlpacaPriceHistoryProvider } from './modules/market-data/infrastructure/alpaca-provider'
 import { createCoinGeckoProvider, createYahooPriceHistoryProvider } from './modules/market-data/infrastructure/movers-providers'
+import { createDefaultNewsSources } from './modules/news/infrastructure/sources'
 import { DEFAULT_ALLOWED_HOSTS } from './shared/security'
 
 export interface Runtime {
@@ -30,6 +31,7 @@ function allowedHosts(env: Env): readonly string[] | '*' {
  * - AWESOMEAPI_KEY: optional key for higher AwesomeAPI quotas.
  * - COINGECKO_API_KEY: optional CoinGecko demo key for higher rate limits.
  * - ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY: free Alpaca keys for official, real-time stock and ETF prices.
+ * - KALIGULA_NEWS=off: disables the news feeds (no requests to news outlets).
  */
 /**
  * Stock and ETF prices: Alpaca (official, real-time IEX trades) when its free keys are configured;
@@ -58,6 +60,7 @@ export async function createRuntime(env: Env = process.env): Promise<Runtime> {
     fxProvider: createFallbackFxProvider([createAwesomeApiFxProvider({ apiKey: env.AWESOMEAPI_KEY }), createErApiFxProvider()]),
     priceHistoryProvider: createPriceHistoryProvider(env),
     cryptoMarketProvider: createCoinGeckoProvider({ apiKey: env.COINGECKO_API_KEY }),
+    newsSources: env.KALIGULA_NEWS === 'off' ? [] : createDefaultNewsSources(),
     fxRefreshMs: Math.max(15, Number(env.FX_REFRESH_SECONDS) || 60) * 1000,
     allowedHosts: allowedHosts(env),
   })

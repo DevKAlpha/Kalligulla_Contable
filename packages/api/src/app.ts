@@ -15,6 +15,9 @@ import type { FxProvider } from './modules/market-data/domain/fx-provider'
 import type { CryptoMarketProvider, PriceHistoryProvider } from './modules/market-data/domain/movers-providers'
 import type { TrmProvider } from './modules/market-data/domain/trm-provider'
 import { marketDataRoutes } from './modules/market-data/http/routes'
+import { createNewsFeed } from './modules/news/application/news-feed'
+import type { NewsSource } from './modules/news/domain/news-source'
+import { newsRoutes } from './modules/news/http/routes'
 import { createDrizzlePortfolioRepository, createPortfolioService, portfolioRoutes } from './modules/portfolio/portfolio'
 import { toErrorResponse } from './shared/errors'
 import type { AppEnv } from './shared/http'
@@ -28,6 +31,8 @@ export interface AppDependencies {
   fxProvider: FxProvider
   priceHistoryProvider: PriceHistoryProvider
   cryptoMarketProvider: CryptoMarketProvider
+  /** Curated news feeds (none by default, so tests and offline builds make no requests). */
+  newsSources?: readonly NewsSource[]
   clock?: () => Date
   ownerResolver?: OwnerResolver
   /** Host names the API answers to, or '*' to disable the check. */
@@ -52,6 +57,7 @@ export function createApp(deps: AppDependencies) {
   const bootstrapOwner = createOwnerBootstrap(db, clock)
   const fxTicker = createFxTicker({ provider: deps.fxProvider, refreshMs: deps.fxRefreshMs, clock })
   const ledger = createLedgerService({ repository: createDrizzleLedgerRepository(db), clock })
+  const newsFeed = createNewsFeed({ sources: deps.newsSources ?? [], clock })
 
   const app = new Hono<AppEnv>().basePath('/api')
   app.use('*', hostGuard(deps.allowedHosts ?? DEFAULT_ALLOWED_HOSTS))
@@ -75,6 +81,7 @@ export function createApp(deps: AppDependencies) {
     marketMovers: createMarketMovers({ prices: deps.priceHistoryProvider, crypto: deps.cryptoMarketProvider, clock }),
     heartbeatMs: deps.sseHeartbeatMs,
   }))
+  app.route('/news', newsRoutes(newsFeed, deps.sseHeartbeatMs))
   app.route('/profile', profileRoutes(createProfileRepository(db), clock))
   app.route('/categories', categoryRoutes(ledger))
   app.route('/movements', movementRoutes(ledger))
@@ -98,8 +105,11 @@ export function createApp(deps: AppDependencies) {
 
   return {
     app,
-    /** Stops background work (live quote polling). */
-    shutdown: () => fxTicker.stop(),
+    /** Stops background work (live quote and news polling). */
+    shutdown: () => {
+      fxTicker.stop()
+      newsFeed.stop()
+    },
   }
 }
 
