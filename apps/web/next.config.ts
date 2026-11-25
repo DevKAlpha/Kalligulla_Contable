@@ -10,6 +10,8 @@ const config: NextConfig = {
   serverExternalPackages: ['@electric-sql/pglite', 'pg'],
   poweredByHeader: false,
   reactStrictMode: true,
+  // No floating Next.js badge over the console in development; build and runtime errors still show.
+  devIndicators: false,
   async headers() {
     return [
       {
