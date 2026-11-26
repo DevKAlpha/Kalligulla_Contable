@@ -1,7 +1,7 @@
 import {
   portfolioImportInputSchema, type PortfolioDto, type PortfolioImportResult,
 } from '@kaligula/contracts'
-import { portfolioImports, portfolioLots, type Database } from '@kaligula/db'
+import type { DatabaseHandle } from '@kaligula/db'
 import {
   DomainError, marketSymbolFor, newId, parseXtbStatement, valuePortfolio,
   type LivePrice, type ParsedStatement, type PortfolioLotDraft, type ValuedLot,
@@ -46,7 +46,7 @@ export interface PortfolioRepository {
 
 /* ---------- Drizzle adapter ---------- */
 
-export function createDrizzlePortfolioRepository(db: Database): PortfolioRepository {
+export function createDrizzlePortfolioRepository({ db, tables: { portfolioImports, portfolioLots } }: Pick<DatabaseHandle, 'db' | 'tables'>): PortfolioRepository {
   return {
     async replaceSnapshot(owner, statement, fileName, now) {
       const importId = newId()

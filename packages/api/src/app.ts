@@ -52,11 +52,10 @@ const OWNER_SCOPES = ['/profile', '/categories', '/movements', '/goals', '/overv
  */
 export function createApp(deps: AppDependencies) {
   const clock = deps.clock ?? (() => new Date())
-  const { db } = deps.database
   const resolveOwner = deps.ownerResolver ?? localOwnerResolver
-  const bootstrapOwner = createOwnerBootstrap(db, clock)
+  const bootstrapOwner = createOwnerBootstrap(deps.database, clock)
   const fxTicker = createFxTicker({ provider: deps.fxProvider, refreshMs: deps.fxRefreshMs, clock })
-  const ledger = createLedgerService({ repository: createDrizzleLedgerRepository(db), clock })
+  const ledger = createLedgerService({ repository: createDrizzleLedgerRepository(deps.database), clock })
   const newsFeed = createNewsFeed({ sources: deps.newsSources ?? [], clock })
 
   const app = new Hono<AppEnv>().basePath('/api')
@@ -82,15 +81,15 @@ export function createApp(deps: AppDependencies) {
     heartbeatMs: deps.sseHeartbeatMs,
   }))
   app.route('/news', newsRoutes(newsFeed, deps.sseHeartbeatMs))
-  app.route('/profile', profileRoutes(createProfileRepository(db), clock))
+  app.route('/profile', profileRoutes(createProfileRepository(deps.database), clock))
   app.route('/categories', categoryRoutes(ledger))
   app.route('/movements', movementRoutes(ledger))
   app.route('/overview', overviewRoutes(ledger))
   app.route('/comparison', comparisonRoutes(ledger))
-  app.route('/goals', createGoalsModule(db, clock))
-  app.route('/backup', createBackupModule(db, clock))
+  app.route('/goals', createGoalsModule(deps.database, clock))
+  app.route('/backup', createBackupModule(deps.database, clock))
   app.route('/portfolio', portfolioRoutes(createPortfolioService({
-    repository: createDrizzlePortfolioRepository(db),
+    repository: createDrizzlePortfolioRepository(deps.database),
     prices: deps.priceHistoryProvider,
     fxTicker,
     clock,

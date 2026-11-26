@@ -67,8 +67,9 @@ export interface TestApp {
  * database (fast) and isolate themselves with `useOwner(randomUUID())`.
  */
 export async function createTestApp(overrides: Partial<AppDependencies> = {}): Promise<TestApp> {
-  const database = await openDatabase()
-  await migrate(database.db)
+  // KALIGULA_TEST_DB=sqlite runs the whole suite on SQLite (desktop engine); default is PGlite.
+  const database = await openDatabase(process.env.KALIGULA_TEST_DB === 'sqlite' ? { sqliteFile: ':memory:' } : {})
+  await migrate(database)
   let owner = 'local'
   const { app, shutdown } = createApp({
     database,

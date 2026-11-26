@@ -22,7 +22,7 @@ describe('health', () => {
     api = await createTestApp()
     const response = await api.json('GET', '/api/health')
     expect(response.status).toBe(200)
-    expect(healthSchema.parse(response.body)).toMatchObject({ status: 'ok', database: { status: 'ok', engine: 'pglite' } })
+    expect(healthSchema.parse(response.body)).toMatchObject({ status: 'ok', database: { status: 'ok', engine: process.env.KALIGULA_TEST_DB === 'sqlite' ? 'sqlite' : 'pglite' } })
   })
 })
 

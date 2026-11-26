@@ -1,5 +1,5 @@
 import { goalInputSchema, type GoalDto, type GoalInput } from '@kaligula/contracts'
-import { goals, type Database } from '@kaligula/db'
+import type { DatabaseHandle, Tables } from '@kaligula/db'
 import { newId, normalizeGoal, type Goal } from '@kaligula/domain'
 import { and, asc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -19,7 +19,7 @@ export interface GoalRepository {
 
 /* ---------- Drizzle adapter ---------- */
 
-function toGoal(row: typeof goals.$inferSelect): Goal {
+function toGoal(row: Tables['goals']['$inferSelect']): Goal {
   return {
     id: row.id,
     name: row.name,
@@ -31,7 +31,7 @@ function toGoal(row: typeof goals.$inferSelect): Goal {
   }
 }
 
-export function createDrizzleGoalRepository(db: Database): GoalRepository {
+export function createDrizzleGoalRepository({ db, tables: { goals } }: Pick<DatabaseHandle, 'db' | 'tables'>): GoalRepository {
   return {
     async list(owner) {
       const rows = await db.select().from(goals).where(eq(goals.ownerId, owner)).orderBy(asc(goals.createdAt), asc(goals.id))

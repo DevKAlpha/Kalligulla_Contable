@@ -33,16 +33,18 @@ function TrmIndicator() {
   )
 }
 
+const STORAGE = { postgres: 'PostgreSQL', pglite: 'la base de datos local (PGlite)', sqlite: 'la base de datos SQLite de este equipo' } as const
+
 /** Storage status: where data is saved and whether the database answers. */
 function DatabaseIndicator() {
   const { data, isError, isPending } = useHealth()
   const up = data?.database.status === 'ok'
-  const engine = data?.database.engine === 'postgres' ? 'PostgreSQL' : 'BD local'
+  const engine = data?.database.engine === 'postgres' ? 'PostgreSQL' : data?.database.engine === 'sqlite' ? 'SQLite' : 'BD local'
   const label = isPending ? 'BD …' : up ? engine : 'BD sin conexión'
   return (
     <span
       className="hidden items-center gap-1.5 sm:flex"
-      title={up ? `Tus datos se guardan en ${data?.database.engine === 'postgres' ? 'PostgreSQL' : 'la base de datos local (PGlite)'}` : 'No hay conexión con la base de datos'}
+      title={up ? `Tus datos se guardan en ${STORAGE[data?.database.engine ?? 'pglite']}` : 'No hay conexión con la base de datos'}
     >
       <span aria-hidden className={cn('size-1.5 rounded-full', isPending ? 'bg-bezel-text/50' : up && !isError ? 'bg-[#5fd394]' : 'bg-[#ff8a6b]')} />
       {label}

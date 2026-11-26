@@ -27,7 +27,7 @@ export const healthSchema = z.object({
   service: z.string(),
   version: z.string(),
   time: isoDateTime,
-  database: z.object({ status: z.enum(['ok', 'error']), engine: z.enum(['postgres', 'pglite']) }),
+  database: z.object({ status: z.enum(['ok', 'error']), engine: z.enum(['postgres', 'pglite', 'sqlite']) }),
 })
 export type Health = z.infer<typeof healthSchema>
 

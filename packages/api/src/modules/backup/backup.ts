@@ -1,5 +1,5 @@
 import { restoreResultSchema, snapshotSchema, type RestoreResult } from '@kaligula/contracts'
-import { categories, goals, movements, profiles, type Database } from '@kaligula/db'
+import type { DatabaseHandle, Tables } from '@kaligula/db'
 import {
   categoryKey, isDefaultCategory, newId, normalizeSnapshot,
   type FinanceSnapshot, type MovementType,
@@ -23,7 +23,7 @@ export interface SnapshotStore {
 /* ---------- Drizzle adapter ---------- */
 
 /** Ids are globally unique: drop the ones already used by other owners so the insert cannot collide. */
-async function freeIds(tx: Executor, table: typeof movements | typeof goals, ids: string[]): Promise<Set<string>> {
+async function freeIds(tx: Executor, table: Tables['movements'] | Tables['goals'], ids: string[]): Promise<Set<string>> {
   const taken = new Set<string>()
   for (const part of chunk(ids)) {
     const rows = await tx.select({ id: table.id }).from(table).where(inArray(table.id, part))
@@ -32,7 +32,8 @@ async function freeIds(tx: Executor, table: typeof movements | typeof goals, ids
   return taken
 }
 
-export function createDrizzleSnapshotStore(db: Database): SnapshotStore {
+export function createDrizzleSnapshotStore({ db, tables }: Pick<DatabaseHandle, 'db' | 'tables'>): SnapshotStore {
+  const { profiles, categories, goals, movements } = tables
   return {
     async export(owner) {
       const [[profile], categoryRows, goalRows, movementRows] = await Promise.all([
@@ -70,7 +71,7 @@ export function createDrizzleSnapshotStore(db: Database): SnapshotStore {
         await tx.delete(movements).where(eq(movements.ownerId, owner))
         await tx.delete(goals).where(eq(goals.ownerId, owner))
         await tx.delete(categories).where(eq(categories.ownerId, owner))
-        await seedOwner(tx, owner, now)
+        await seedOwner(tx, tables, owner, now)
         await tx.update(profiles).set({ name: snapshot.profile.name, updatedAt: now }).where(eq(profiles.ownerId, owner))
 
         if (snapshot.categories.length) {

@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { migrate, openDatabase, type DatabaseHandle } from '@kaligula/db'
+import { migrate, openDatabase, type DatabaseHandle, type OpenDatabaseOptions } from '@kaligula/db'
 import { createApp, type KaligulaApp } from './app'
 import { createAwesomeApiFxProvider, createErApiFxProvider, createFallbackFxProvider } from './modules/market-data/infrastructure/fx-providers'
 import { createDatosGovTrmProvider } from './modules/market-data/infrastructure/datos-gov-trm-provider'
@@ -26,6 +26,7 @@ function allowedHosts(env: Env): readonly string[] | '*' {
  * Builds the API from environment variables:
  * - DATABASE_URL: PostgreSQL connection string (Docker, servers). Without it, PGlite is used.
  * - KALIGULA_DATA_DIR: folder of the embedded PGlite database (default: ./.data/pglite).
+ * - KALIGULA_DB=sqlite / KALIGULA_SQLITE_FILE: SQLite database file instead (desktop app; default ./.data/kaligula.sqlite).
  * - KALIGULA_ALLOWED_HOSTS: extra host names, comma separated ('*' disables the check).
  * - FX_REFRESH_SECONDS: live quote refresh interval (default 60, minimum 15).
  * - AWESOMEAPI_KEY: optional key for higher AwesomeAPI quotas.
@@ -44,12 +45,20 @@ export function createPriceHistoryProvider(env: Env): PriceHistoryProvider {
   return createYahooPriceHistoryProvider()
 }
 
+/**
+ * DATABASE_URL wins (PostgreSQL). Otherwise KALIGULA_DB=sqlite selects SQLite (desktop app) in
+ * KALIGULA_SQLITE_FILE, and anything else the embedded PGlite database in KALIGULA_DATA_DIR.
+ */
+export function databaseOptions(env: Env): OpenDatabaseOptions {
+  if (env.DATABASE_URL) return { url: env.DATABASE_URL }
+  if (env.KALIGULA_DB === 'sqlite') return { sqliteFile: env.KALIGULA_SQLITE_FILE || path.resolve(process.cwd(), '.data', 'kaligula.sqlite') }
+  return { dataDir: env.KALIGULA_DATA_DIR || path.resolve(process.cwd(), '.data', 'pglite') }
+}
+
 export async function createRuntime(env: Env = process.env): Promise<Runtime> {
-  const database = await openDatabase(
-    env.DATABASE_URL ? { url: env.DATABASE_URL } : { dataDir: env.KALIGULA_DATA_DIR || path.resolve(process.cwd(), '.data', 'pglite') },
-  )
+  const database = await openDatabase(databaseOptions(env))
   try {
-    await migrate(database.db)
+    await migrate(database)
   } catch (error) {
     await database.close().catch(() => undefined)
     throw error

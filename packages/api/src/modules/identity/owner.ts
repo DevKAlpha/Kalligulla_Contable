@@ -1,4 +1,4 @@
-import { categories, profiles } from '@kaligula/db'
+import type { DatabaseHandle, Tables } from '@kaligula/db'
 import { DEFAULT_CATEGORIES, MOVEMENT_TYPES, newId, SYSTEM_CATEGORY_NAME } from '@kaligula/domain'
 import type { Context } from 'hono'
 import type { Executor } from '../../shared/db'
@@ -11,7 +11,7 @@ export type OwnerResolver = (c: Context) => string
 export const localOwnerResolver: OwnerResolver = () => LOCAL_OWNER
 
 /** Creates the profile and default categories of an owner. Idempotent and safe under concurrency. */
-export async function seedOwner(db: Executor, owner: string, now: Date = new Date()): Promise<void> {
+export async function seedOwner(db: Executor, { profiles, categories }: Tables, owner: string, now: Date = new Date()): Promise<void> {
   await db.insert(profiles).values({ ownerId: owner, name: '', createdAt: now, updatedAt: now }).onConflictDoNothing()
   const rows = MOVEMENT_TYPES.flatMap((type) => DEFAULT_CATEGORIES[type].map((name) => ({
     id: newId(),
@@ -26,12 +26,12 @@ export async function seedOwner(db: Executor, owner: string, now: Date = new Dat
 }
 
 /** Seeds each owner once per process. */
-export function createOwnerBootstrap(db: Executor, clock: () => Date) {
+export function createOwnerBootstrap({ db, tables }: Pick<DatabaseHandle, 'db' | 'tables'>, clock: () => Date) {
   const ready = new Map<string, Promise<void>>()
   return (owner: string): Promise<void> => {
     let pending = ready.get(owner)
     if (!pending) {
-      pending = seedOwner(db, owner, clock()).catch((error) => {
+      pending = seedOwner(db, tables, owner, clock()).catch((error) => {
         ready.delete(owner)
         throw error
       })

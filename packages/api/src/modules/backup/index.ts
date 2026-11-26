@@ -1,6 +1,6 @@
-import type { Database } from '@kaligula/db'
+import type { DatabaseHandle } from '@kaligula/db'
 import { backupRoutes, createDrizzleSnapshotStore } from './backup'
 
-export function createBackupModule(db: Database, clock: () => Date) {
-  return backupRoutes(createDrizzleSnapshotStore(db), clock)
+export function createBackupModule(database: Pick<DatabaseHandle, 'db' | 'tables'>, clock: () => Date) {
+  return backupRoutes(createDrizzleSnapshotStore(database), clock)
 }

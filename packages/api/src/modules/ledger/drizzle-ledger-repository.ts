@@ -1,20 +1,22 @@
-import { categories, movements, type Database } from '@kaligula/db'
+import { likeInsensitive, lowerOf, type DatabaseHandle, type Tables } from '@kaligula/db'
 import { emptyByType, SYSTEM_CATEGORY_NAME, type Category, type Movement, type MovementType } from '@kaligula/domain'
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, max, min, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, inArray, lte, max, min, or, sql, type SQL } from 'drizzle-orm'
 import type { CategoryWithUsage, LedgerRepository, MovementQuery } from './ports'
 
-const movementColumns = {
-  id: movements.id,
-  type: movements.type,
-  description: movements.description,
-  categoryId: movements.categoryId,
-  category: categories.name,
-  amountMinor: movements.amountMinor,
-  currency: movements.currency,
-  occurredOn: movements.occurredOn,
-  note: movements.note,
-  createdAt: movements.createdAt,
-  updatedAt: movements.updatedAt,
+function movementColumnsOf({ movements, categories }: Tables) {
+  return {
+    id: movements.id,
+    type: movements.type,
+    description: movements.description,
+    categoryId: movements.categoryId,
+    category: categories.name,
+    amountMinor: movements.amountMinor,
+    currency: movements.currency,
+    occurredOn: movements.occurredOn,
+    note: movements.note,
+    createdAt: movements.createdAt,
+    updatedAt: movements.updatedAt,
+  }
 }
 
 interface MovementRow {
@@ -50,7 +52,9 @@ function likePattern(text: string): string {
   return `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`
 }
 
-export function createDrizzleLedgerRepository(db: Database): LedgerRepository {
+export function createDrizzleLedgerRepository({ db, tables }: Pick<DatabaseHandle, 'db' | 'tables'>): LedgerRepository {
+  const { categories, movements } = tables
+  const movementColumns = movementColumnsOf(tables)
   const categoryUsage = {
     id: categories.id,
     type: categories.type,
@@ -67,7 +71,7 @@ export function createDrizzleLedgerRepository(db: Database): LedgerRepository {
     if (query.to) filters.push(lte(movements.occurredOn, query.to))
     if (query.q) {
       const pattern = likePattern(query.q)
-      filters.push(or(ilike(movements.description, pattern), ilike(movements.note, pattern), ilike(categories.name, pattern)))
+      filters.push(or(likeInsensitive(movements.description, pattern), likeInsensitive(movements.note, pattern), likeInsensitive(categories.name, pattern)))
     }
     return and(...filters)!
   }
@@ -78,7 +82,7 @@ export function createDrizzleLedgerRepository(db: Database): LedgerRepository {
         .leftJoin(movements, eq(movements.categoryId, categories.id))
         .where(eq(categories.ownerId, owner))
         .groupBy(categories.id)
-        .orderBy(asc(categories.type), asc(categories.system), asc(sql`lower(${categories.name})`))
+        .orderBy(asc(categories.type), asc(categories.system), asc(lowerOf(categories.name)))
       return rows.map(toCategory)
     },
 
@@ -92,7 +96,7 @@ export function createDrizzleLedgerRepository(db: Database): LedgerRepository {
 
     async findCategoryByName(owner, type, name) {
       const [row] = await db.select().from(categories)
-        .where(and(eq(categories.ownerId, owner), eq(categories.type, type), sql`lower(${categories.name}) = lower(${name})`))
+        .where(and(eq(categories.ownerId, owner), eq(categories.type, type), eq(lowerOf(categories.name), name.toLowerCase())))
       return row ? toCategory(row) : null
     },
 

@@ -1,5 +1,5 @@
 import { profileInputSchema, type ProfileDto } from '@kaligula/contracts'
-import { profiles, type Database } from '@kaligula/db'
+import type { DatabaseHandle } from '@kaligula/db'
 import { normalizeProfile } from '@kaligula/domain'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -12,7 +12,7 @@ export interface ProfileRepository {
 }
 
 /** Drizzle adapter */
-export function createProfileRepository(db: Database): ProfileRepository {
+export function createProfileRepository({ db, tables: { profiles } }: Pick<DatabaseHandle, 'db' | 'tables'>): ProfileRepository {
   return {
     async get(owner) {
       const [row] = await db.select({ name: profiles.name }).from(profiles).where(eq(profiles.ownerId, owner))
