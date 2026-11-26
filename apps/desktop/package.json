@@ -1,14 +1,15 @@
 {
   "name": "@kaligula/desktop",
-  "version": "0.4.0",
+  "productName": "Kaligula",
+  "version": "0.1.0-A",
   "private": true,
-  "description": "Kaligula para escritorio: Electron ejecuta el servidor standalone de Next.js en local.",
+  "description": "Kaligula para escritorio (Windows): Electron ejecuta el servidor standalone de Next.js en local con una base de datos SQLite.",
   "author": "Kaligula Finance",
   "main": "main.cjs",
   "scripts": {
     "dev": "concurrently -k -n web,desktop \"npm run dev -w @kaligula/web\" \"wait-on http://127.0.0.1:3000/api/health && electron .\"",
     "prepare:web": "node scripts/prepare-web.mjs",
-    "dist:win": "npm run prepare:web && electron-builder --win portable",
+    "dist:win": "npm run prepare:web && electron-builder --win nsis --x64",
     "dist": "npm run prepare:web && electron-builder"
   },
   "devDependencies": {
@@ -22,7 +23,8 @@
     "productName": "Kaligula",
     "asar": true,
     "directories": {
-      "output": "../../release"
+      "output": "../../release",
+      "buildResources": "build"
     },
     "files": [
       "main.cjs",
@@ -41,10 +43,15 @@
     ],
     "win": {
       "target": [
-        "portable"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "../web/public/kaligula.ico",
-      "artifactName": "Kaligula-${version}-Portable.${ext}"
+      "artifactName": "Kaligula-0.1A-Setup.${ext}"
     },
     "linux": {
       "target": [
@@ -58,6 +65,26 @@
       ],
       "category": "public.app-category.finance"
     },
-    "afterPack": "./scripts/after-pack.cjs"
+    "afterPack": "./scripts/after-pack.cjs",
+    "copyright": "Copyright © 2026 Kaligula Finance",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "../web/public/kaligula.ico",
+      "uninstallerIcon": "../web/public/kaligula.ico",
+      "installerHeaderIcon": "../web/public/kaligula.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kaligula",
+      "uninstallDisplayName": "Kaligula 0.1A",
+      "installerLanguages": [
+        "es_ES"
+      ],
+      "language": "3082",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }

@@ -9,10 +9,10 @@ Kaligula es una consola financiera personal. Sirve para registrar ingresos, gast
 | Web | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
 | Datos en el cliente | TanStack Query (caché de servidor); Zustand solo para el estado de la interfaz |
 | API | Hono, montada en Next.js en `/api`; también puede correr sola en Node |
-| Base de datos | PostgreSQL (servidores y Docker) o PGlite (Postgres embebido: escritorio y desarrollo), con Drizzle ORM |
+| Base de datos | PostgreSQL (servidores y Docker), SQLite (app de escritorio, con `node:sqlite`) o PGlite (Postgres embebido para desarrollo), con Drizzle ORM |
 | Validación de contratos | Zod |
 | Tiempo real | Server-Sent Events (`/api/market/fx/stream`) |
-| Escritorio | Electron, que ejecuta el servidor standalone de Next.js en local |
+| Escritorio | Electron, que ejecuta el servidor standalone de Next.js en local; instalador NSIS para Windows |
 | Calidad | ESLint, `tsc` estricto, Vitest |
 | Despliegue | Docker con imagen multi-stage `node:22-alpine` y PostgreSQL 17 |
 
@@ -39,7 +39,7 @@ KALIGULLA/
 ├── packages/
 │   ├── domain/              Reglas puras sin I/O: dinero, movimientos, categorías, metas, analítica, CSV, divisas
 │   ├── contracts/           Esquemas Zod compartidos entre la API y los clientes
-│   ├── db/                  Esquema Drizzle, migraciones SQL versionadas y conexión PostgreSQL/PGlite
+│   ├── db/                  Esquema Drizzle, migraciones SQL versionadas y conexión PostgreSQL/PGlite/SQLite
 │   └── api/                 Hono, organizada en módulos
 │       └── src/modules/
 │           ├── identity/    Dueño de los datos y perfil
@@ -55,7 +55,7 @@ KALIGULLA/
 Reglas que mantienen el código portable a Bun:
 - `packages/domain` no puede importar módulos de Node ni frameworks. Una regla de ESLint lo verifica.
 - La API usa solo APIs web estándar (`fetch`, `Request`/`Response`, `AbortSignal`, Web Crypto).
-- Los drivers de base de datos (`pg`, PGlite) son JavaScript puro, sin addons nativos.
+- Los drivers de base de datos (`pg`, PGlite) son JavaScript puro, sin addons nativos. SQLite usa el módulo integrado `node:sqlite` (Bun tiene `bun:sqlite`).
 - Cada app tiene un único punto de arranque. Hoy es `packages/api/src/main.node.ts`; un futuro `main.bun.ts` exportaría `{ fetch: runtime.app.fetch }`.
 
 ## Funciones
@@ -134,7 +134,7 @@ Cómo activarlo (son llaves de solo lectura de datos; no hace falta depositar di
    |---|---|
    | `npm run dev` / `npm run start` | `apps/web/.env.local` |
    | Docker (`docker compose up`) | `.env` en la raíz |
-   | Escritorio (`.exe`) | `%APPDATA%\@kaligula\desktop\kaligula.env` |
+   | Escritorio (instalado) | `%APPDATA%\Kaligula\kaligula.env` |
 
    ```dotenv
    ALPACA_API_KEY_ID=tu-key-id
@@ -201,7 +201,7 @@ El Banco de la República y el Banco de Corea no publican un feed vigente, así 
 ### Otras funciones
 
 - **TRM oficial** en el bisel de la consola, desde datos.gov.co, con caché de 30 minutos.
-- **Estado de la base de datos** en el bisel: «BD local» (PGlite), «PostgreSQL» o «BD sin conexión».
+- **Estado de la base de datos** en el bisel: «BD local» (PGlite), «SQLite», «PostgreSQL» o «BD sin conexión».
 - **Tema claro, oscuro o del sistema**, sin parpadeo al cargar. Al cambiarlo, el nuevo tema se revela en círculo desde la tecla pulsada (View Transitions).
 - **Animaciones optimizadas:** encendido de pantalla una vez por sesión, entrada escalonada de secciones, números que cuentan hasta su valor, barras que crecen y líneas que se revelan, palancas que se inclinan al pulsar, diálogos y *skeletons* con brillo.
   - Solo animan `transform` y `opacity`, o un recorte único en las gráficas de línea.
@@ -213,11 +213,27 @@ El Banco de la República y el Banco de Corea no publican un feed vigente, así 
 | Cómo se ejecuta | Base de datos | Ubicación |
 |---|---|---|
 | `npm run dev` / `npm run start` | PGlite | `apps/web/.data/pglite` (ignorado por git) |
-| Escritorio (`.exe`) | PGlite | `%APPDATA%\@kaligula\desktop\database` |
+| Escritorio (instalado) | SQLite | `%APPDATA%\Kaligula\kaligula.sqlite` |
 | Docker (`docker compose up`) | PostgreSQL 17 | Volumen `pgdata` |
 | Cualquiera con `DATABASE_URL` | PostgreSQL | El servidor indicado |
 
-Las migraciones (`packages/db/src/migrations.ts`) se aplican solas al arrancar, en orden y una sola vez. Nunca se edita una migración publicada: se añade una nueva.
+Las migraciones (`packages/db/src/migrations.ts`) se aplican solas al arrancar, en orden y una sola vez. Nunca se edita una migración publicada: se añade una nueva, en sus dos versiones: `MIGRATIONS` (PostgreSQL y PGlite) y `SQLITE_MIGRATIONS` (SQLite), con el mismo id.
+
+Los repositorios se escriben una sola vez: reciben las tablas del motor activo (`DatabaseHandle.tables`) en lugar de importarlas, y las consultas que no son portables (búsqueda sin distinguir mayúsculas, `lower()`) usan los helpers de `@kaligula/db`. Toda la suite de la API se ejecuta dos veces, sobre PGlite y sobre SQLite (proyecto `api-sqlite` de Vitest).
+
+## App de escritorio para Windows (versión 0.1A)
+
+```bash
+npm run desktop:win     # genera release/Kaligula-0.1A-Setup.exe
+```
+
+- **Instalador:** NSIS con el icono de Kaligula, en español. Instala para todos los usuarios y por defecto en `C:\Program Files (x86)\Kaligula` (lo fija `apps/desktop/build/installer.nsh`); permite elegir otra carpeta. Pide permisos de administrador y crea accesos directos en el escritorio y en el menú Inicio.
+- **Arquitectura:** la app es de 64 bits y requiere Windows 10 u 11 de 64 bits. Electron dejó de publicar versiones de 32 bits para Windows, así que no hay build x86 aunque la carpeta sea «Program Files (x86)».
+- **Versión:** «Aplicaciones instaladas» muestra `0.1A`. En `apps/desktop/package.json` figura como `0.1.0-A`, porque npm exige el formato semver.
+- **Datos:** la base SQLite vive en `%APPDATA%\Kaligula\kaligula.sqlite`, fuera de la carpeta del programa, y desinstalar no la borra. Las claves opcionales, como las de Alpaca, van en `%APPDATA%\Kaligula\kaligula.env`.
+- **Mismas funciones que la web:** el escritorio ejecuta el mismo servidor de Next.js en `127.0.0.1:47821`, sin exponerlo a la red.
+- **Datos de una versión portátil anterior:** usaban otra base (PGlite) en `%APPDATA%\@kaligula\desktop`. Para pasarlos, exporta un respaldo en la versión anterior y restáuralo en la nueva desde *Respaldo*.
+- **Firma de código:** el instalador no está firmado, así que Windows SmartScreen puede advertir al abrirlo («Más información» → «Ejecutar de todas formas»).
 
 ## Seguridad (todavía sin inicio de sesión)
 
@@ -283,12 +299,12 @@ npm run dev            # http://localhost:3000 (crea la base local en apps/web/.
 | `npm run build` | Compilación de producción (standalone) |
 | `npm run start` | Sirve la compilación de producción |
 | `npm run api:dev` | API sola en `http://127.0.0.1:4000/api` |
-| `npm run test` | Pruebas con Vitest: dominio, base de datos, API (sobre PGlite en memoria) y cliente web |
+| `npm run test` | Pruebas con Vitest: dominio, base de datos (PGlite y SQLite), API (sobre PGlite y sobre SQLite, en memoria) y cliente web |
 | `npm run typecheck` | `tsc` estricto en todos los workspaces |
 | `npm run lint` | ESLint |
 | `npm run check` | lint + typecheck + test |
 | `npm run desktop:dev` | Next.js + Electron en desarrollo |
-| `npm run desktop:win` | Ejecutable portátil para Windows en `release/` |
+| `npm run desktop:win` | Instalador de Windows en `release/Kaligula-0.1A-Setup.exe` |
 | `npm run icons` | Regenera los íconos de `apps/web/public/` |
 
 Las variables de entorno están documentadas en `.env.example`.

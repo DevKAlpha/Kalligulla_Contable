@@ -53,8 +53,10 @@ async function startEmbeddedServer() {
       NODE_ENV: 'production',
       PORT: String(PORT),
       HOSTNAME: HOST,
-      // Embedded PostgreSQL (PGlite) database, kept in the user's profile folder.
-      KALIGULA_DATA_DIR: path.join(app.getPath('userData'), 'database'),
+      // SQLite database file in the user's profile folder (%APPDATA%\Kaligula on Windows).
+      // The install folder (Program Files) is read-only for the app, so no data lives there.
+      KALIGULA_DB: 'sqlite',
+      KALIGULA_SQLITE_FILE: path.join(app.getPath('userData'), 'kaligula.sqlite'),
     },
     stdio: 'inherit',
     serviceName: 'kaligula-web',
